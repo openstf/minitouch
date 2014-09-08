@@ -4,7 +4,8 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := minitouch
 
-LOCAL_SRC_FILES := minitouch.cpp
+LOCAL_SRC_FILES := \
+	minitouch.c \
 
 LOCAL_STATIC_LIBRARIES := libevdev
 
