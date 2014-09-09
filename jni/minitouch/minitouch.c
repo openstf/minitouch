@@ -13,6 +13,7 @@
 #include <libevdev.h>
 
 #define MAX_CONTACTS 10
+#define VERSION 1
 #define DEFAULT_SOCKET_PATH "/data/local/tmp/minitouch.sock"
 
 static void usage(const char* pname)
@@ -51,9 +52,9 @@ typedef struct
   int max_pressure;
   int max_x;
   int max_y;
-  contact_t contacts[MAX_CONTACTS];
   int max_contacts;
   int tracking_id;
+  contact_t contacts[MAX_CONTACTS];
 } internal_state_t;
 
 static int is_character_device(const char* devpath)
@@ -145,8 +146,6 @@ static int consider_device(const char* devpath, internal_state_t* state)
   strncpy(state->path, devpath, sizeof(state->path));
   state->evdev = evdev;
 
-  printf("%s\n", devpath);
-
   return 1;
 
 mismatch:
@@ -218,48 +217,6 @@ static int next_tracking_id(internal_state_t* state)
   }
 
   return state->tracking_id;
-}
-
-static int type_a_touch_down(internal_state_t* state, int contact, int x, int y, int pressure)
-{
-  if (contact >= state->max_contacts || state->contacts[contact].enabled)
-  {
-    return 0;
-  }
-
-  state->contacts[contact].enabled = 1;
-  state->contacts[contact].x = x;
-  state->contacts[contact].y = y;
-  state->contacts[contact].pressure = pressure;
-
-  return 1;
-}
-
-static int type_a_touch_move(internal_state_t* state, int contact, int x, int y, int pressure)
-{
-  if (contact >= state->max_contacts || !state->contacts[contact].enabled)
-  {
-    return 0;
-  }
-
-  state->contacts[contact].enabled = 2;
-  state->contacts[contact].x = x;
-  state->contacts[contact].y = y;
-  state->contacts[contact].pressure = pressure;
-
-  return 1;
-}
-
-static int type_a_touch_up(internal_state_t* state, int contact)
-{
-  if (contact >= state->max_contacts || !state->contacts[contact].enabled)
-  {
-    return 0;
-  }
-
-  state->contacts[contact].enabled = 3;
-
-  return 1;
 }
 
 static int type_a_commit(internal_state_t* state)
@@ -338,11 +295,106 @@ static int type_a_commit(internal_state_t* state)
   return 1;
 }
 
-static int type_b_touch_down(internal_state_t* state, int contact, int x, int y, int pressure)
+static int type_a_touch_panic_reset_all(internal_state_t* state)
 {
-  if (contact >= state->max_contacts || state->contacts[contact].enabled)
+  int contact;
+
+  for (contact = 0; contact < state->max_contacts; ++contact)
+  {
+    switch (state->contacts[contact].enabled)
+    {
+      case 1: // WENT_DOWN
+      case 2: // MOVED
+        // Force everything to WENT_UP
+        state->contacts[contact].enabled = 3;
+        break;
+    }
+  }
+
+  return type_a_commit(state);
+}
+
+static int type_a_touch_down(internal_state_t* state, int contact, int x, int y, int pressure)
+{
+  if (contact >= state->max_contacts)
   {
     return 0;
+  }
+
+  if (state->contacts[contact].enabled)
+  {
+    type_a_touch_panic_reset_all(state);
+  }
+
+  state->contacts[contact].enabled = 1;
+  state->contacts[contact].x = x;
+  state->contacts[contact].y = y;
+  state->contacts[contact].pressure = pressure;
+
+  return 1;
+}
+
+static int type_a_touch_move(internal_state_t* state, int contact, int x, int y, int pressure)
+{
+  if (contact >= state->max_contacts || !state->contacts[contact].enabled)
+  {
+    return 0;
+  }
+
+  state->contacts[contact].enabled = 2;
+  state->contacts[contact].x = x;
+  state->contacts[contact].y = y;
+  state->contacts[contact].pressure = pressure;
+
+  return 1;
+}
+
+static int type_a_touch_up(internal_state_t* state, int contact)
+{
+  if (contact >= state->max_contacts || !state->contacts[contact].enabled)
+  {
+    return 0;
+  }
+
+  state->contacts[contact].enabled = 3;
+
+  return 1;
+}
+
+static int type_b_commit(internal_state_t* state)
+{
+  write_event(state, EV_SYN, SYN_REPORT, 0);
+
+  return 1;
+}
+
+static int type_b_touch_panic_reset_all(internal_state_t* state)
+{
+  int contact;
+  int found_any = 0;
+
+  for (contact = 0; contact < state->max_contacts; ++contact)
+  {
+    if (state->contacts[contact].enabled)
+    {
+      state->contacts[contact].enabled = 0;
+      found_any = 1;
+    }
+  }
+
+  return found_any ? type_b_commit(state) : 1;
+}
+
+static int type_b_touch_down(internal_state_t* state, int contact, int x, int y, int pressure)
+{
+  if (contact >= state->max_contacts)
+  {
+    return 0;
+  }
+
+  if (state->contacts[contact].enabled)
+  {
+    type_b_touch_panic_reset_all(state);
   }
 
   state->contacts[contact].enabled = 1;
@@ -412,13 +464,6 @@ static int type_b_touch_up(internal_state_t* state, int contact)
   return 1;
 }
 
-static int type_b_commit(internal_state_t* state)
-{
-  write_event(state, EV_SYN, SYN_REPORT, 0);
-
-  return 1;
-}
-
 static int touch_down(internal_state_t* state, int contact, int x, int y, int pressure)
 {
   if (state->has_mtslot)
@@ -455,6 +500,18 @@ static int touch_up(internal_state_t* state, int contact)
   }
 }
 
+static int touch_panic_reset_all(internal_state_t* state)
+{
+  if (state->has_mtslot)
+  {
+    return type_b_touch_panic_reset_all(state);
+  }
+  else
+  {
+    return type_a_touch_panic_reset_all(state);
+  }
+}
+
 static int commit(internal_state_t* state)
 {
   if (state->has_mtslot)
@@ -466,7 +523,6 @@ static int commit(internal_state_t* state)
     return type_a_commit(state);
   }
 }
-
 
 static int start_server(char* sockpath)
 {
@@ -594,8 +650,6 @@ int main(int argc, char* argv[])
     state.path, state.score
   );
 
-  fprintf(stdout, "max %d %d %d\n", state.max_x, state.max_y, state.max_pressure);
-
   struct sockaddr_un client_addr;
   socklen_t client_addr_length = sizeof(client_addr);
 
@@ -620,46 +674,60 @@ int main(int argc, char* argv[])
 
     fprintf(stderr, "Connection established\n");
 
-    char input[80] = {0};
-    int input_length = 0;
+    char io_buffer[80] = {0};
+    int io_length = 0;
     char* cursor;
     long int contact, x, y, pressure;
 
+    // touch_panic_reset_all(&state);
+
+    // Tell version
+    io_length = snprintf(io_buffer, sizeof(io_buffer), "v %d\n", VERSION);
+    write(client_fd, io_buffer, io_length);
+
+    // Tell limits
+    io_length = snprintf(io_buffer, sizeof(io_buffer), "^ %d %d %d %d\n",
+      state.max_contacts, state.max_x, state.max_y, state.max_pressure);
+    write(client_fd, io_buffer, io_length);
+
     while (1)
     {
-      input_length = 0;
+      io_length = 0;
 
-      while (input_length < sizeof(input) &&
-        read(client_fd, &input[input_length], 1) == 1)
+      while (io_length < sizeof(io_buffer) &&
+        read(client_fd, &io_buffer[io_length], 1) == 1)
       {
-        if (input[input_length++] == '\n')
+        if (io_buffer[io_length++] == '\n')
         {
           break;
         }
       }
 
-      if (input_length <= 0)
+      if (io_length <= 0)
       {
         break;
       }
 
-      if (input[input_length - 1] != '\n')
+      if (io_buffer[io_length - 1] != '\n')
       {
         continue;
       }
 
-      if (input_length == 1)
+      if (io_length == 1)
       {
         continue;
       }
 
-      cursor = (char*) &input;
+      cursor = (char*) &io_buffer;
       cursor += 1;
 
-      switch (input[0])
+      switch (io_buffer[0])
       {
         case 'c': // COMMIT
           commit(&state);
+          break;
+        case 'r': // RESET
+          touch_panic_reset_all(&state);
           break;
         case 'd': // TOUCH DOWN
           contact = strtol(cursor, &cursor, 10);
