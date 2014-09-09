@@ -222,7 +222,7 @@ static int next_tracking_id(internal_state_t* state)
 
 static int type_a_touch_down(internal_state_t* state, int contact, int x, int y, int pressure)
 {
-  if (contact > state->max_contacts || state->contacts[contact].enabled)
+  if (contact >= state->max_contacts || state->contacts[contact].enabled)
   {
     return 0;
   }
@@ -237,7 +237,7 @@ static int type_a_touch_down(internal_state_t* state, int contact, int x, int y,
 
 static int type_a_touch_move(internal_state_t* state, int contact, int x, int y, int pressure)
 {
-  if (contact > state->max_contacts || !state->contacts[contact].enabled)
+  if (contact >= state->max_contacts || !state->contacts[contact].enabled)
   {
     return 0;
   }
@@ -252,7 +252,7 @@ static int type_a_touch_move(internal_state_t* state, int contact, int x, int y,
 
 static int type_a_touch_up(internal_state_t* state, int contact)
 {
-  if (contact > state->max_contacts || !state->contacts[contact].enabled)
+  if (contact >= state->max_contacts || !state->contacts[contact].enabled)
   {
     return 0;
   }
@@ -340,7 +340,7 @@ static int type_a_commit(internal_state_t* state)
 
 static int type_b_touch_down(internal_state_t* state, int contact, int x, int y, int pressure)
 {
-  if (contact > state->max_contacts || state->contacts[contact].enabled)
+  if (contact >= state->max_contacts || state->contacts[contact].enabled)
   {
     return 0;
   }
@@ -372,7 +372,7 @@ static int type_b_touch_down(internal_state_t* state, int contact, int x, int y,
 
 static int type_b_touch_move(internal_state_t* state, int contact, int x, int y, int pressure)
 {
-  if (contact > state->max_contacts || !state->contacts[contact].enabled)
+  if (contact >= state->max_contacts || !state->contacts[contact].enabled)
   {
     return 0;
   }
@@ -396,7 +396,7 @@ static int type_b_touch_move(internal_state_t* state, int contact, int x, int y,
 
 static int type_b_touch_up(internal_state_t* state, int contact)
 {
-  if (contact > state->max_contacts || !state->contacts[contact].enabled)
+  if (contact >= state->max_contacts || !state->contacts[contact].enabled)
   {
     return 0;
   }
