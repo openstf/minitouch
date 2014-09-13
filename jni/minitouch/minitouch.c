@@ -20,7 +20,7 @@ static void usage(const char* pname)
 {
   fprintf(stderr,
     "Usage: %s [-h] [-d <device>] [-s <socket>]\n"
-    "  -d <device>: Use the given touch device.\n"
+    "  -d <device>: Use the given touch device. Otherwise autodetect.\n"
     "  -s <socket>: Start a unix domain socket at the given path. (%s)\n"
     "  -h:          Show help.\n",
     pname, DEFAULT_SOCKET_PATH
