@@ -555,11 +555,6 @@ static int start_server(char* sockpath)
   return fd;
 }
 
-static int read_int(int fd, int* out)
-{
-  char buffer[1];
-}
-
 int main(int argc, char* argv[])
 {
   const char* pname = argv[0];
