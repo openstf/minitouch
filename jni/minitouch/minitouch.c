@@ -53,6 +53,7 @@ typedef struct
   int max_x;
   int max_y;
   int max_contacts;
+  int max_tracking_id;
   int tracking_id;
   contact_t contacts[MAX_CONTACTS];
 } internal_state_t;
@@ -623,8 +624,13 @@ int main(int argc, char* argv[])
   state.max_x = libevdev_get_abs_maximum(state.evdev, ABS_MT_POSITION_X);
   state.max_y = libevdev_get_abs_maximum(state.evdev, ABS_MT_POSITION_Y);
 
-  state.max_contacts = state.has_mtslot ?
-    libevdev_get_abs_maximum(state.evdev, ABS_MT_SLOT) : 2;
+  state.max_tracking_id = state.has_tracking_id
+    ? libevdev_get_abs_maximum(state.evdev, ABS_MT_TRACKING_ID)
+    : INT_MAX;
+
+  state.max_contacts = state.has_mtslot
+    ? libevdev_get_abs_maximum(state.evdev, ABS_MT_SLOT)
+    : (state.has_tracking_id ? state.max_tracking_id + 1 : 2);
 
   state.tracking_id = 0;
 
@@ -635,10 +641,10 @@ int main(int argc, char* argv[])
   }
 
   fprintf(stderr,
-    "%s touch device %s (%dx%d) detected on %s (score %d)\n",
+    "%s touch device %s (%dx%d with %d contacts) detected on %s (score %d)\n",
     state.has_mtslot ? "Type B" : "Type A",
     libevdev_get_name(state.evdev),
-    state.max_x, state.max_y,
+    state.max_x, state.max_y, state.max_contacts,
     state.path, state.score
   );
 
