@@ -648,6 +648,12 @@ int main(int argc, char* argv[])
     state.path, state.score
   );
 
+  if (state.max_contacts > MAX_CONTACTS) {
+    fprintf(stderr, "Note: hard-limiting maximum number of contacts to %d\n",
+      MAX_CONTACTS);
+    state.max_contacts = MAX_CONTACTS;
+  }
+
   struct sockaddr_un client_addr;
   socklen_t client_addr_length = sizeof(client_addr);
 
