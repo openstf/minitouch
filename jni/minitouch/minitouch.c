@@ -14,16 +14,16 @@
 
 #define MAX_CONTACTS 10
 #define VERSION 1
-#define DEFAULT_SOCKET_PATH "/data/local/tmp/minitouch.sock"
+#define DEFAULT_SOCKET_NAME "minitouch"
 
 static void usage(const char* pname)
 {
   fprintf(stderr,
-    "Usage: %s [-h] [-d <device>] [-s <socket>]\n"
+    "Usage: %s [-h] [-d <device>] [-n <name>]\n"
     "  -d <device>: Use the given touch device. Otherwise autodetect.\n"
-    "  -s <socket>: Start a unix domain socket at the given path. (%s)\n"
+    "  -n <name>:   Change the name of of the abtract unix domain socket. (%s)\n"
     "  -h:          Show help.\n",
-    pname, DEFAULT_SOCKET_PATH
+    pname, DEFAULT_SOCKET_NAME
   );
 }
 
@@ -524,7 +524,7 @@ static int commit(internal_state_t* state)
   }
 }
 
-static int start_server(char* sockpath)
+static int start_server(char* sockname)
 {
   int fd = socket(AF_UNIX, SOCK_STREAM, 0);
 
@@ -537,13 +537,10 @@ static int start_server(char* sockpath)
   struct sockaddr_un addr;
   memset(&addr, 0, sizeof(addr));
   addr.sun_family = AF_UNIX;
-  strcpy(addr.sun_path, sockpath);
+  strncpy(&addr.sun_path[1], sockname, strlen(sockname));
 
-  int length = strlen(addr.sun_path) + sizeof(addr.sun_family);
-
-  unlink(addr.sun_path);
-
-  if (bind(fd, (struct sockaddr*) &addr, length) < 0)
+  if (bind(fd, (struct sockaddr*) &addr,
+    sizeof(sa_family_t) + strlen(sockname) + 1) < 0)
   {
     perror("binding socket");
     close(fd);
@@ -560,16 +557,16 @@ int main(int argc, char* argv[])
   const char* pname = argv[0];
   const char* devroot = "/dev/input";
   char* device = NULL;
-  char* socket = DEFAULT_SOCKET_PATH;
+  char* sockname = DEFAULT_SOCKET_NAME;
 
   int opt;
-  while ((opt = getopt(argc, argv, "d:s:h")) != -1) {
+  while ((opt = getopt(argc, argv, "d:n:h")) != -1) {
     switch (opt) {
       case 'd':
         device = optarg;
         break;
-      case 's':
-        socket = optarg;
+      case 'n':
+        sockname = optarg;
         break;
       case '?':
         usage(pname);
@@ -648,11 +645,11 @@ int main(int argc, char* argv[])
   struct sockaddr_un client_addr;
   socklen_t client_addr_length = sizeof(client_addr);
 
-  int server_fd = start_server(socket);
+  int server_fd = start_server(sockname);
 
   if (server_fd < 0)
   {
-    fprintf(stderr, "Unable to start server on %s\n", socket);
+    fprintf(stderr, "Unable to start server on %s\n", sockname);
     return EXIT_FAILURE;
   }
 

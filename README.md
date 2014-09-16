@@ -47,13 +47,13 @@ adb shell /data/local/tmp/minitouch -h
 Currently, this should output be something along the lines of:
 
 ```
-Usage: /data/local/tmp/minitouch [-h] [-d <device>] [-s <socket>]
+Usage: /data/local/tmp/minitouch [-h] [-d <device>] [-n <name>]
   -d <device>: Use the given touch device. Otherwise autodetect.
-  -s <socket>: Start a unix domain socket at the given path. (/data/local/tmp/minitouch.sock)
+  -n <name>:   Change the name of of the abtract unix domain socket. (minitouch)
   -h:          Show help.
 ````
 
-So, we can simply run the binary without any options, and it will try to detect an appropriate device and start listening on a unix domain socket.
+So, we can simply run the binary without any options, and it will try to detect an appropriate device and start listening on an abstract unix domain socket.
 
 ```bash
 adb shell /data/local/tmp/minitouch
@@ -62,7 +62,7 @@ adb shell /data/local/tmp/minitouch
 Unless there was an error message and the binary exited, we should now have a socket open on the device. Now we simply need to create a local forward so that we can connect to the socket.
 
 ```bash
-adb forward tcp:1111 localfilesystem:/data/local/tmp/minitouch.soc
+adb forward tcp:1111 localabstract:minitouch
 ```
 
 Now you can connect to the socket using the local port.
