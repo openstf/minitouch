@@ -633,6 +633,22 @@ int main(int argc, char* argv[])
     ? libevdev_get_abs_maximum(state.evdev, ABS_MT_TRACKING_ID)
     : INT_MAX;
 
+  if (!state.has_mtslot && state.max_tracking_id == 0)
+  {
+    // The touch device reports incorrect values. There would be no point
+    // in supporting ABS_MT_TRACKING_ID at all if the maximum value was 0
+    // (i.e. one contact). This happens on Lenovo Yoga Tablet B6000-F,
+    // which actually seems to support ~10 contacts. So, we'll just go with
+    // as many as we can and hope that the system will ignore extra contacts.
+    state.max_tracking_id = MAX_SUPPORTED_CONTACTS - 1;
+    fprintf(stderr,
+      "Note: type A device reports a max value of 0 for ABS_MT_TRACKING_ID. "
+      "This means that the device is most likely reporting incorrect "
+      "information. Guessing %d.\n",
+      state.max_tracking_id
+    );
+  }
+
   state.max_contacts = state.has_mtslot
     ? libevdev_get_abs_maximum(state.evdev, ABS_MT_SLOT) + 1
     : (state.has_tracking_id ? state.max_tracking_id + 1 : 2);
