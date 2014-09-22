@@ -12,7 +12,7 @@
 
 #include <libevdev.h>
 
-#define MAX_CONTACTS 10
+#define MAX_SUPPORTED_CONTACTS 10
 #define VERSION 1
 #define DEFAULT_SOCKET_NAME "minitouch"
 
@@ -55,7 +55,7 @@ typedef struct
   int max_contacts;
   int max_tracking_id;
   int tracking_id;
-  contact_t contacts[MAX_CONTACTS];
+  contact_t contacts[MAX_SUPPORTED_CONTACTS];
 } internal_state_t;
 
 static int is_character_device(const char* devpath)
@@ -634,13 +634,13 @@ int main(int argc, char* argv[])
     : INT_MAX;
 
   state.max_contacts = state.has_mtslot
-    ? libevdev_get_abs_maximum(state.evdev, ABS_MT_SLOT)
+    ? libevdev_get_abs_maximum(state.evdev, ABS_MT_SLOT) + 1
     : (state.has_tracking_id ? state.max_tracking_id + 1 : 2);
 
   state.tracking_id = 0;
 
   int contact;
-  for (contact = 0; contact < MAX_CONTACTS; ++contact)
+  for (contact = 0; contact < MAX_SUPPORTED_CONTACTS; ++contact)
   {
     state.contacts[contact].enabled = 0;
   }
@@ -653,10 +653,10 @@ int main(int argc, char* argv[])
     state.path, state.score
   );
 
-  if (state.max_contacts > MAX_CONTACTS) {
+  if (state.max_contacts > MAX_SUPPORTED_CONTACTS) {
     fprintf(stderr, "Note: hard-limiting maximum number of contacts to %d\n",
-      MAX_CONTACTS);
-    state.max_contacts = MAX_CONTACTS;
+      MAX_SUPPORTED_CONTACTS);
+    state.max_contacts = MAX_SUPPORTED_CONTACTS;
   }
 
   struct sockaddr_un client_addr;
