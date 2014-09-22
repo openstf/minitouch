@@ -125,6 +125,11 @@ static int consider_device(const char* devpath, internal_state_t* state)
     score -= tool_max - MT_TOOL_FINGER;
   }
 
+  if (libevdev_has_event_code(evdev, EV_ABS, ABS_MT_SLOT))
+  {
+    score += 100;
+  }
+
   if (state->evdev != NULL)
   {
     if (state->score >= score)
