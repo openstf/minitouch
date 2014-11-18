@@ -24,7 +24,9 @@ You should now have the binaries available in `./libs`.
 
 ## Running
 
-You'll need to [build](#building) first. Then, figure out which ABI your device supports:
+You'll need to [build](#building) first. You can then use the included [run.sh](run.sh) script to run the right binary on your device. If you have multiple devices connected, set `ANDROID_SERIAL` before running the script.
+
+To run manually, you have to first figure out which ABI your device supports:
 
 ```bash
 ABI=$(adb shell getprop ro.product.cpu.abi | tr -d '\r')
@@ -39,6 +41,8 @@ Now, push the appropriate binary to the device:
 ```bash
 adb push libs/$ABI/minitouch /data/local/tmp/
 ```
+
+Note that for SDK <16, you will have to use the `minitouch-nopie` executable which comes without [PIE](http://en.wikipedia.org/wiki/Position-independent_code#Position-independent_executables) support. Check [run.sh](run.sh) for a scripting example.
 
 At this point it might be useful to check the usage:
 
