@@ -1,6 +1,8 @@
 # minitouch
 
-Minitouch provides a socket interface for triggering multitouch events and gestures on Android devices. On SDK 19 and lower, it can run without root if started via [ADB](http://developer.android.com/tools/help/adb.html). The lowest SDK level we test is 10 (i.e. Android 2.3.3).
+Minitouch provides a socket interface for triggering multitouch events and gestures on Android devices. It works without root if started via [ADB](http://developer.android.com/tools/help/adb.html) on SDK 21 or lower. The sole exception is SDK 20 (Android Wear), which does require root. The lowest SDK level we test is 10 (i.e. Android 2.3.3).
+
+It works especially well with HTML5 multitouch events, and unlike the Android [monkey](http://developer.android.com/tools/help/monkey.html) tool, allows you to access the whole screen (including any software buttons).
 
 ## Building
 
@@ -65,7 +67,7 @@ Unless there was an error message and the binary exited, we should now have a so
 adb forward tcp:1111 localabstract:minitouch
 ```
 
-Now you can connect to the socket using the local port.
+Now you can connect to the socket using the local port. Note that currently **only one connection at a time is supported.** This is mainly because it would otherwise be too easy to submit broken event streams, confusing the driver and possibly freezing the device until a reboot (which, by the way, you'd most likely have to do with `adb reboot` due to the unresponsive screen). Anyway, let's connect.
 
 ```bash
 nc localhost 1111
