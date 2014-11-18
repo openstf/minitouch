@@ -89,7 +89,7 @@ When you first open a connection to the socket, you'll get some protocol metadat
 
 Example output: `v 1`
 
-The protocol version. Argument layout may change between versions, so you might want to check if your code supports this version or not.
+The protocol version. This line is guaranteed to come first in the output. Argument layout may change between versions, so you might want to check if your code supports this version or not.
 
 #### `^ <max-contacts> <max-x> <max-y> <max-pressure>`
 
