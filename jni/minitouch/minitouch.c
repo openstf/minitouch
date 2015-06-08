@@ -715,6 +715,10 @@ int main(int argc, char* argv[])
       state.max_contacts, state.max_x, state.max_y, state.max_pressure);
     write(client_fd, io_buffer, io_length);
 
+    // Tell pid
+    io_length = snprintf(io_buffer, sizeof(io_buffer), "$ %d\n", getpid());
+    write(client_fd, io_buffer, io_length);
+
     while (1)
     {
       io_length = 0;
