@@ -103,6 +103,12 @@ This gives you the upper bounds of arguments, as reported by the touch device. I
 
 It's also very important to note that the maximum X and Y coordinates may, but usually do not, match the display size. You'll need to work out a good way to map display coordinates to touch coordinates if required, possibly by using percentages for screen coordinates.
 
+#### `$ <pid>`
+
+Example output: `$ 9876`
+
+This is the pid of the minicap process. Useful if you want to to kill the process.
+
 ### Writable to the socket
 
 #### `c`
