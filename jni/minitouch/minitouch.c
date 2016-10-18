@@ -130,6 +130,15 @@ static int consider_device(const char* devpath, internal_state_t* state)
     score += 100;
   }
 
+  // Alcatel OneTouch Idol 3 has an `input_mt_wrapper` device in addition
+  // to direct input. It seems to be related to accessibility, as it shows
+  // a touchpoint that you can move around, and then tap to activate whatever
+  // is under the point. That wrapper device lacks the direct property.
+  if (libevdev_has_property(evdev, INPUT_PROP_DIRECT))
+  {
+    score += 1000;
+  }
+
   if (state->evdev != NULL)
   {
     if (state->score >= score)
