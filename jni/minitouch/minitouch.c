@@ -16,12 +16,15 @@
 #define VERSION 1
 #define DEFAULT_SOCKET_NAME "minitouch"
 
+static int g_verbose = 0;
+
 static void usage(const char* pname)
 {
   fprintf(stderr,
     "Usage: %s [-h] [-d <device>] [-n <name>]\n"
     "  -d <device>: Use the given touch device. Otherwise autodetect.\n"
     "  -n <name>:   Change the name of of the abtract unix domain socket. (%s)\n"
+    "  -v:          Verbose output.\n"
     "  -h:          Show help.\n",
     pname, DEFAULT_SOCKET_NAME
   );
@@ -202,8 +205,12 @@ static int walk_devices(const char* path, internal_state_t* state)
   }
 }
 
-static int write_event(internal_state_t* state, uint16_t type,
-  uint16_t code, int32_t value)
+#define WRITE_EVENT(state, type, code, value) _write_event(state, type, #type, code, #code, value)
+
+static int _write_event(internal_state_t* state,
+  uint16_t type, const char* type_name,
+  uint16_t code, const char* code_name,
+  int32_t value)
 {
   // It seems that most devices do not require the event timestamps at all.
   // Left here for reference should such a situation arise.
@@ -215,6 +222,9 @@ static int write_event(internal_state_t* state, uint16_t type,
   struct input_event event = {{0, 0}, type, code, value};
   ssize_t result;
   ssize_t length = (ssize_t) sizeof(event);
+
+  if (g_verbose)
+    fprintf(stderr, "%-12s %-20s %08x\n", type_name, code_name, value);
 
   result = write(state->fd, &event, length);
   return result - length;
@@ -247,24 +257,24 @@ static int type_a_commit(internal_state_t* state)
         found_any = 1;
 
         if (state->has_tracking_id)
-          write_event(state, EV_ABS, ABS_MT_TRACKING_ID, contact);
+          WRITE_EVENT(state, EV_ABS, ABS_MT_TRACKING_ID, contact);
 
         if (state->has_key_btn_touch)
-          write_event(state, EV_KEY, BTN_TOUCH, 1);
+          WRITE_EVENT(state, EV_KEY, BTN_TOUCH, 1);
 
         if (state->has_touch_major)
-          write_event(state, EV_ABS, ABS_MT_TOUCH_MAJOR, 0x00000006);
+          WRITE_EVENT(state, EV_ABS, ABS_MT_TOUCH_MAJOR, 0x00000006);
 
         if (state->has_width_major)
-          write_event(state, EV_ABS, ABS_MT_WIDTH_MAJOR, 0x00000004);
+          WRITE_EVENT(state, EV_ABS, ABS_MT_WIDTH_MAJOR, 0x00000004);
 
         if (state->has_pressure)
-          write_event(state, EV_ABS, ABS_MT_PRESSURE, state->contacts[contact].pressure);
+          WRITE_EVENT(state, EV_ABS, ABS_MT_PRESSURE, state->contacts[contact].pressure);
 
-        write_event(state, EV_ABS, ABS_MT_POSITION_X, state->contacts[contact].x);
-        write_event(state, EV_ABS, ABS_MT_POSITION_Y, state->contacts[contact].y);
+        WRITE_EVENT(state, EV_ABS, ABS_MT_POSITION_X, state->contacts[contact].x);
+        WRITE_EVENT(state, EV_ABS, ABS_MT_POSITION_Y, state->contacts[contact].y);
 
-        write_event(state, EV_SYN, SYN_MT_REPORT, 0);
+        WRITE_EVENT(state, EV_SYN, SYN_MT_REPORT, 0);
 
         state->contacts[contact].enabled = 2;
         break;
@@ -272,32 +282,32 @@ static int type_a_commit(internal_state_t* state)
         found_any = 1;
 
         if (state->has_tracking_id)
-          write_event(state, EV_ABS, ABS_MT_TRACKING_ID, contact);
+          WRITE_EVENT(state, EV_ABS, ABS_MT_TRACKING_ID, contact);
 
         if (state->has_touch_major)
-          write_event(state, EV_ABS, ABS_MT_TOUCH_MAJOR, 0x00000006);
+          WRITE_EVENT(state, EV_ABS, ABS_MT_TOUCH_MAJOR, 0x00000006);
 
         if (state->has_width_major)
-          write_event(state, EV_ABS, ABS_MT_WIDTH_MAJOR, 0x00000004);
+          WRITE_EVENT(state, EV_ABS, ABS_MT_WIDTH_MAJOR, 0x00000004);
 
         if (state->has_pressure)
-          write_event(state, EV_ABS, ABS_MT_PRESSURE, state->contacts[contact].pressure);
+          WRITE_EVENT(state, EV_ABS, ABS_MT_PRESSURE, state->contacts[contact].pressure);
 
-        write_event(state, EV_ABS, ABS_MT_POSITION_X, state->contacts[contact].x);
-        write_event(state, EV_ABS, ABS_MT_POSITION_Y, state->contacts[contact].y);
+        WRITE_EVENT(state, EV_ABS, ABS_MT_POSITION_X, state->contacts[contact].x);
+        WRITE_EVENT(state, EV_ABS, ABS_MT_POSITION_Y, state->contacts[contact].y);
 
-        write_event(state, EV_SYN, SYN_MT_REPORT, 0);
+        WRITE_EVENT(state, EV_SYN, SYN_MT_REPORT, 0);
         break;
       case 3: // WENT_UP
         found_any = 1;
 
         if (state->has_tracking_id)
-          write_event(state, EV_ABS, ABS_MT_TRACKING_ID, contact);
+          WRITE_EVENT(state, EV_ABS, ABS_MT_TRACKING_ID, contact);
 
         if (state->has_key_btn_touch)
-          write_event(state, EV_KEY, BTN_TOUCH, 0);
+          WRITE_EVENT(state, EV_KEY, BTN_TOUCH, 0);
 
-        write_event(state, EV_SYN, SYN_MT_REPORT, 0);
+        WRITE_EVENT(state, EV_SYN, SYN_MT_REPORT, 0);
 
         state->contacts[contact].enabled = 0;
         break;
@@ -305,7 +315,7 @@ static int type_a_commit(internal_state_t* state)
   }
 
   if (found_any)
-    write_event(state, EV_SYN, SYN_REPORT, 0);
+    WRITE_EVENT(state, EV_SYN, SYN_REPORT, 0);
 
   return 1;
 }
@@ -378,7 +388,7 @@ static int type_a_touch_up(internal_state_t* state, int contact)
 
 static int type_b_commit(internal_state_t* state)
 {
-  write_event(state, EV_SYN, SYN_REPORT, 0);
+  WRITE_EVENT(state, EV_SYN, SYN_REPORT, 0);
 
   return 1;
 }
@@ -415,24 +425,24 @@ static int type_b_touch_down(internal_state_t* state, int contact, int x, int y,
   state->contacts[contact].enabled = 1;
   state->contacts[contact].tracking_id = next_tracking_id(state);
 
-  write_event(state, EV_ABS, ABS_MT_SLOT, contact);
-  write_event(state, EV_ABS, ABS_MT_TRACKING_ID,
+  WRITE_EVENT(state, EV_ABS, ABS_MT_SLOT, contact);
+  WRITE_EVENT(state, EV_ABS, ABS_MT_TRACKING_ID,
     state->contacts[contact].tracking_id);
 
   if (state->has_key_btn_touch)
-    write_event(state, EV_KEY, BTN_TOUCH, 1);
+    WRITE_EVENT(state, EV_KEY, BTN_TOUCH, 1);
 
   if (state->has_touch_major)
-    write_event(state, EV_ABS, ABS_MT_TOUCH_MAJOR, 0x00000006);
+    WRITE_EVENT(state, EV_ABS, ABS_MT_TOUCH_MAJOR, 0x00000006);
 
   if (state->has_width_major)
-    write_event(state, EV_ABS, ABS_MT_WIDTH_MAJOR, 0x00000004);
+    WRITE_EVENT(state, EV_ABS, ABS_MT_WIDTH_MAJOR, 0x00000004);
 
   if (state->has_pressure)
-    write_event(state, EV_ABS, ABS_MT_PRESSURE, pressure);
+    WRITE_EVENT(state, EV_ABS, ABS_MT_PRESSURE, pressure);
 
-  write_event(state, EV_ABS, ABS_MT_POSITION_X, x);
-  write_event(state, EV_ABS, ABS_MT_POSITION_Y, y);
+  WRITE_EVENT(state, EV_ABS, ABS_MT_POSITION_X, x);
+  WRITE_EVENT(state, EV_ABS, ABS_MT_POSITION_Y, y);
 
   return 1;
 }
@@ -444,19 +454,19 @@ static int type_b_touch_move(internal_state_t* state, int contact, int x, int y,
     return 0;
   }
 
-  write_event(state, EV_ABS, ABS_MT_SLOT, contact);
+  WRITE_EVENT(state, EV_ABS, ABS_MT_SLOT, contact);
 
   if (state->has_touch_major)
-    write_event(state, EV_ABS, ABS_MT_TOUCH_MAJOR, 0x00000006);
+    WRITE_EVENT(state, EV_ABS, ABS_MT_TOUCH_MAJOR, 0x00000006);
 
   if (state->has_width_major)
-    write_event(state, EV_ABS, ABS_MT_WIDTH_MAJOR, 0x00000004);
+    WRITE_EVENT(state, EV_ABS, ABS_MT_WIDTH_MAJOR, 0x00000004);
 
   if (state->has_pressure)
-    write_event(state, EV_ABS, ABS_MT_PRESSURE, pressure);
+    WRITE_EVENT(state, EV_ABS, ABS_MT_PRESSURE, pressure);
 
-  write_event(state, EV_ABS, ABS_MT_POSITION_X, x);
-  write_event(state, EV_ABS, ABS_MT_POSITION_Y, y);
+  WRITE_EVENT(state, EV_ABS, ABS_MT_POSITION_X, x);
+  WRITE_EVENT(state, EV_ABS, ABS_MT_POSITION_Y, y);
 
   return 1;
 }
@@ -470,11 +480,11 @@ static int type_b_touch_up(internal_state_t* state, int contact)
 
   state->contacts[contact].enabled = 0;
 
-  write_event(state, EV_ABS, ABS_MT_SLOT, contact);
-  write_event(state, EV_ABS, ABS_MT_TRACKING_ID, -1);
+  WRITE_EVENT(state, EV_ABS, ABS_MT_SLOT, contact);
+  WRITE_EVENT(state, EV_ABS, ABS_MT_TRACKING_ID, -1);
 
   if (state->has_key_btn_touch)
-    write_event(state, EV_KEY, BTN_TOUCH, 0);
+    WRITE_EVENT(state, EV_KEY, BTN_TOUCH, 0);
 
   return 1;
 }
@@ -575,13 +585,16 @@ int main(int argc, char* argv[])
   char* sockname = DEFAULT_SOCKET_NAME;
 
   int opt;
-  while ((opt = getopt(argc, argv, "d:n:h")) != -1) {
+  while ((opt = getopt(argc, argv, "d:n:vh")) != -1) {
     switch (opt) {
       case 'd':
         device = optarg;
         break;
       case 'n':
         sockname = optarg;
+        break;
+      case 'v':
+        g_verbose = 1;
         break;
       case '?':
         usage(pname);
