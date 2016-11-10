@@ -159,6 +159,12 @@ Schedules a touch up on contact `<contact>`. If you need the contact to move fir
 
 You cannot have more than one `d`, `m` or `u` *for the same `<contact>`* in one commit.
 
+#### `w <ms>`
+
+Example input: `w 50`
+
+Immediately waits for `<ms>` milliseconds. Will not commit the queue or do anything else.
+
 ### Examples
 
 Tap on (10, 10) with 50 pressure using a single contact.

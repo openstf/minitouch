@@ -724,7 +724,7 @@ int main(int argc, char* argv[])
     char io_buffer[80] = {0};
     int io_length = 0;
     char* cursor;
-    long int contact, x, y, pressure;
+    long int contact, x, y, pressure, wait;
 
     // touch_panic_reset_all(&state);
 
@@ -797,6 +797,10 @@ int main(int argc, char* argv[])
         case 'u': // TOUCH UP
           contact = strtol(cursor, &cursor, 10);
           touch_up(&state, contact);
+          break;
+        case 'w':
+          wait = strtol(cursor, &cursor, 10);
+          usleep(wait * 1000);
           break;
         default:
           break;
