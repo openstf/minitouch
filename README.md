@@ -85,7 +85,7 @@ It is assumed that you now have an open connection to the minitouch socket. If n
 
 The minitouch protocol is based on LF-separated lines. Each line is a separate command, and each line begins with a single ASCII letter which specifies the command type. Space-separated command-specific arguments then follow.
 
-When you first open a connection to the socket, you'll get some protocol metadata which you'll need need to read from the socket. Other than that there will be no responses of any kind.
+When you first open a connection to the socket, you'll get some protocol metadata which you'll need to read from the socket. Other than that there will be no responses of any kind.
 
 ### Readable from the socket
 
