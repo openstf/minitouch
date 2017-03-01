@@ -231,7 +231,7 @@ static const char * const key_map[KEY_MAX + 1] = {
 	[KEY_WWW] = "KEY_WWW",
 	[KEY_MSDOS] = "KEY_MSDOS",
 	[KEY_COFFEE] = "KEY_COFFEE",
-	[KEY_DIRECTION] = "KEY_DIRECTION",
+	[KEY_ROTATE_DISPLAY] = "KEY_ROTATE_DISPLAY",
 	[KEY_CYCLEWINDOWS] = "KEY_CYCLEWINDOWS",
 	[KEY_MAIL] = "KEY_MAIL",
 	[KEY_BOOKMARKS] = "KEY_BOOKMARKS",
@@ -460,6 +460,10 @@ static const char * const key_map[KEY_MAX + 1] = {
 	[KEY_NUMERIC_9] = "KEY_NUMERIC_9",
 	[KEY_NUMERIC_STAR] = "KEY_NUMERIC_STAR",
 	[KEY_NUMERIC_POUND] = "KEY_NUMERIC_POUND",
+	[KEY_NUMERIC_A] = "KEY_NUMERIC_A",
+	[KEY_NUMERIC_B] = "KEY_NUMERIC_B",
+	[KEY_NUMERIC_C] = "KEY_NUMERIC_C",
+	[KEY_NUMERIC_D] = "KEY_NUMERIC_D",
 	[KEY_CAMERA_FOCUS] = "KEY_CAMERA_FOCUS",
 	[KEY_WPS_BUTTON] = "KEY_WPS_BUTTON",
 	[KEY_TOUCHPAD_TOGGLE] = "KEY_TOUCHPAD_TOGGLE",
@@ -485,6 +489,30 @@ static const char * const key_map[KEY_MAX + 1] = {
 	[KEY_VOICECOMMAND] = "KEY_VOICECOMMAND",
 	[KEY_BRIGHTNESS_MIN] = "KEY_BRIGHTNESS_MIN",
 	[KEY_BRIGHTNESS_MAX] = "KEY_BRIGHTNESS_MAX",
+	[KEY_KBDINPUTASSIST_PREV] = "KEY_KBDINPUTASSIST_PREV",
+	[KEY_KBDINPUTASSIST_NEXT] = "KEY_KBDINPUTASSIST_NEXT",
+	[KEY_KBDINPUTASSIST_PREVGROUP] = "KEY_KBDINPUTASSIST_PREVGROUP",
+	[KEY_KBDINPUTASSIST_NEXTGROUP] = "KEY_KBDINPUTASSIST_NEXTGROUP",
+	[KEY_KBDINPUTASSIST_ACCEPT] = "KEY_KBDINPUTASSIST_ACCEPT",
+	[KEY_KBDINPUTASSIST_CANCEL] = "KEY_KBDINPUTASSIST_CANCEL",
+	[KEY_RIGHT_UP] = "KEY_RIGHT_UP",
+	[KEY_RIGHT_DOWN] = "KEY_RIGHT_DOWN",
+	[KEY_LEFT_UP] = "KEY_LEFT_UP",
+	[KEY_LEFT_DOWN] = "KEY_LEFT_DOWN",
+	[KEY_ROOT_MENU] = "KEY_ROOT_MENU",
+	[KEY_MEDIA_TOP_MENU] = "KEY_MEDIA_TOP_MENU",
+	[KEY_NUMERIC_11] = "KEY_NUMERIC_11",
+	[KEY_NUMERIC_12] = "KEY_NUMERIC_12",
+	[KEY_AUDIO_DESC] = "KEY_AUDIO_DESC",
+	[KEY_3D_MODE] = "KEY_3D_MODE",
+	[KEY_NEXT_FAVORITE] = "KEY_NEXT_FAVORITE",
+	[KEY_STOP_RECORD] = "KEY_STOP_RECORD",
+	[KEY_PAUSE_RECORD] = "KEY_PAUSE_RECORD",
+	[KEY_VOD] = "KEY_VOD",
+	[KEY_UNMUTE] = "KEY_UNMUTE",
+	[KEY_FASTREVERSE] = "KEY_FASTREVERSE",
+	[KEY_SLOWREVERSE] = "KEY_SLOWREVERSE",
+	[KEY_DATA] = "KEY_DATA",
 	[KEY_MAX] = "KEY_MAX",
 	[BTN_DPAD_UP] = "BTN_DPAD_UP",
 	[BTN_DPAD_DOWN] = "BTN_DPAD_DOWN",
@@ -687,6 +715,8 @@ static const char * const input_prop_map[INPUT_PROP_MAX + 1] = {
 	[INPUT_PROP_BUTTONPAD] = "INPUT_PROP_BUTTONPAD",
 	[INPUT_PROP_SEMI_MT] = "INPUT_PROP_SEMI_MT",
 	[INPUT_PROP_TOPBUTTONPAD] = "INPUT_PROP_TOPBUTTONPAD",
+	[INPUT_PROP_POINTING_STICK] = "INPUT_PROP_POINTING_STICK",
+	[INPUT_PROP_ACCELEROMETER] = "INPUT_PROP_ACCELEROMETER",
 	[INPUT_PROP_MAX] = "INPUT_PROP_MAX",
 };
 
@@ -703,8 +733,13 @@ static const char * const * const event_type_map[EV_MAX + 1] = {
 	[EV_REP] = rep_map,
 };
 
+#if __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winitializer-overrides"
+#else
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverride-init"
+#endif
 static const int ev_max[EV_MAX + 1] = {
 	[0 ... EV_MAX] = -1,
 	[EV_REL] = REL_MAX,
@@ -718,7 +753,11 @@ static const int ev_max[EV_MAX + 1] = {
 	[EV_SYN] = SYN_MAX,
 	[EV_REP] = REP_MAX,
 };
+#if __clang__
+#pragma clang diagnostic pop /* "-Winitializer-overrides" */
+#else
 #pragma GCC diagnostic pop /* "-Woverride-init" */
+#endif
 
 struct name_entry {
 	const char *name;
@@ -921,6 +960,7 @@ static const struct name_entry code_names[] = {
 	{ .name = "KEY_10CHANNELSUP", .value = KEY_10CHANNELSUP },
 	{ .name = "KEY_2", .value = KEY_2 },
 	{ .name = "KEY_3", .value = KEY_3 },
+	{ .name = "KEY_3D_MODE", .value = KEY_3D_MODE },
 	{ .name = "KEY_4", .value = KEY_4 },
 	{ .name = "KEY_5", .value = KEY_5 },
 	{ .name = "KEY_6", .value = KEY_6 },
@@ -941,6 +981,7 @@ static const struct name_entry code_names[] = {
 	{ .name = "KEY_ATTENDANT_ON", .value = KEY_ATTENDANT_ON },
 	{ .name = "KEY_ATTENDANT_TOGGLE", .value = KEY_ATTENDANT_TOGGLE },
 	{ .name = "KEY_AUDIO", .value = KEY_AUDIO },
+	{ .name = "KEY_AUDIO_DESC", .value = KEY_AUDIO_DESC },
 	{ .name = "KEY_AUX", .value = KEY_AUX },
 	{ .name = "KEY_B", .value = KEY_B },
 	{ .name = "KEY_BACK", .value = KEY_BACK },
@@ -1003,6 +1044,7 @@ static const struct name_entry code_names[] = {
 	{ .name = "KEY_CYCLEWINDOWS", .value = KEY_CYCLEWINDOWS },
 	{ .name = "KEY_D", .value = KEY_D },
 	{ .name = "KEY_DASHBOARD", .value = KEY_DASHBOARD },
+	{ .name = "KEY_DATA", .value = KEY_DATA },
 	{ .name = "KEY_DATABASE", .value = KEY_DATABASE },
 	{ .name = "KEY_DELETE", .value = KEY_DELETE },
 	{ .name = "KEY_DELETEFILE", .value = KEY_DELETEFILE },
@@ -1010,7 +1052,6 @@ static const struct name_entry code_names[] = {
 	{ .name = "KEY_DEL_EOS", .value = KEY_DEL_EOS },
 	{ .name = "KEY_DEL_LINE", .value = KEY_DEL_LINE },
 	{ .name = "KEY_DIGITS", .value = KEY_DIGITS },
-	{ .name = "KEY_DIRECTION", .value = KEY_DIRECTION },
 	{ .name = "KEY_DIRECTORY", .value = KEY_DIRECTORY },
 	{ .name = "KEY_DISPLAYTOGGLE", .value = KEY_DISPLAYTOGGLE },
 	{ .name = "KEY_DISPLAY_OFF", .value = KEY_DISPLAY_OFF },
@@ -1058,6 +1099,7 @@ static const struct name_entry code_names[] = {
 	{ .name = "KEY_F8", .value = KEY_F8 },
 	{ .name = "KEY_F9", .value = KEY_F9 },
 	{ .name = "KEY_FASTFORWARD", .value = KEY_FASTFORWARD },
+	{ .name = "KEY_FASTREVERSE", .value = KEY_FASTREVERSE },
 	{ .name = "KEY_FAVORITES", .value = KEY_FAVORITES },
 	{ .name = "KEY_FILE", .value = KEY_FILE },
 	{ .name = "KEY_FINANCE", .value = KEY_FINANCE },
@@ -1118,6 +1160,12 @@ static const struct name_entry code_names[] = {
 	{ .name = "KEY_KBDILLUMDOWN", .value = KEY_KBDILLUMDOWN },
 	{ .name = "KEY_KBDILLUMTOGGLE", .value = KEY_KBDILLUMTOGGLE },
 	{ .name = "KEY_KBDILLUMUP", .value = KEY_KBDILLUMUP },
+	{ .name = "KEY_KBDINPUTASSIST_ACCEPT", .value = KEY_KBDINPUTASSIST_ACCEPT },
+	{ .name = "KEY_KBDINPUTASSIST_CANCEL", .value = KEY_KBDINPUTASSIST_CANCEL },
+	{ .name = "KEY_KBDINPUTASSIST_NEXT", .value = KEY_KBDINPUTASSIST_NEXT },
+	{ .name = "KEY_KBDINPUTASSIST_NEXTGROUP", .value = KEY_KBDINPUTASSIST_NEXTGROUP },
+	{ .name = "KEY_KBDINPUTASSIST_PREV", .value = KEY_KBDINPUTASSIST_PREV },
+	{ .name = "KEY_KBDINPUTASSIST_PREVGROUP", .value = KEY_KBDINPUTASSIST_PREVGROUP },
 	{ .name = "KEY_KEYBOARD", .value = KEY_KEYBOARD },
 	{ .name = "KEY_KP0", .value = KEY_KP0 },
 	{ .name = "KEY_KP1", .value = KEY_KP1 },
@@ -1150,6 +1198,8 @@ static const struct name_entry code_names[] = {
 	{ .name = "KEY_LEFTCTRL", .value = KEY_LEFTCTRL },
 	{ .name = "KEY_LEFTMETA", .value = KEY_LEFTMETA },
 	{ .name = "KEY_LEFTSHIFT", .value = KEY_LEFTSHIFT },
+	{ .name = "KEY_LEFT_DOWN", .value = KEY_LEFT_DOWN },
+	{ .name = "KEY_LEFT_UP", .value = KEY_LEFT_UP },
 	{ .name = "KEY_LIGHTS_TOGGLE", .value = KEY_LIGHTS_TOGGLE },
 	{ .name = "KEY_LINEFEED", .value = KEY_LINEFEED },
 	{ .name = "KEY_LIST", .value = KEY_LIST },
@@ -1160,6 +1210,7 @@ static const struct name_entry code_names[] = {
 	{ .name = "KEY_MAX", .value = KEY_MAX },
 	{ .name = "KEY_MEDIA", .value = KEY_MEDIA },
 	{ .name = "KEY_MEDIA_REPEAT", .value = KEY_MEDIA_REPEAT },
+	{ .name = "KEY_MEDIA_TOP_MENU", .value = KEY_MEDIA_TOP_MENU },
 	{ .name = "KEY_MEMO", .value = KEY_MEMO },
 	{ .name = "KEY_MENU", .value = KEY_MENU },
 	{ .name = "KEY_MESSENGER", .value = KEY_MESSENGER },
@@ -1177,8 +1228,11 @@ static const struct name_entry code_names[] = {
 	{ .name = "KEY_NEWS", .value = KEY_NEWS },
 	{ .name = "KEY_NEXT", .value = KEY_NEXT },
 	{ .name = "KEY_NEXTSONG", .value = KEY_NEXTSONG },
+	{ .name = "KEY_NEXT_FAVORITE", .value = KEY_NEXT_FAVORITE },
 	{ .name = "KEY_NUMERIC_0", .value = KEY_NUMERIC_0 },
 	{ .name = "KEY_NUMERIC_1", .value = KEY_NUMERIC_1 },
+	{ .name = "KEY_NUMERIC_11", .value = KEY_NUMERIC_11 },
+	{ .name = "KEY_NUMERIC_12", .value = KEY_NUMERIC_12 },
 	{ .name = "KEY_NUMERIC_2", .value = KEY_NUMERIC_2 },
 	{ .name = "KEY_NUMERIC_3", .value = KEY_NUMERIC_3 },
 	{ .name = "KEY_NUMERIC_4", .value = KEY_NUMERIC_4 },
@@ -1187,6 +1241,10 @@ static const struct name_entry code_names[] = {
 	{ .name = "KEY_NUMERIC_7", .value = KEY_NUMERIC_7 },
 	{ .name = "KEY_NUMERIC_8", .value = KEY_NUMERIC_8 },
 	{ .name = "KEY_NUMERIC_9", .value = KEY_NUMERIC_9 },
+	{ .name = "KEY_NUMERIC_A", .value = KEY_NUMERIC_A },
+	{ .name = "KEY_NUMERIC_B", .value = KEY_NUMERIC_B },
+	{ .name = "KEY_NUMERIC_C", .value = KEY_NUMERIC_C },
+	{ .name = "KEY_NUMERIC_D", .value = KEY_NUMERIC_D },
 	{ .name = "KEY_NUMERIC_POUND", .value = KEY_NUMERIC_POUND },
 	{ .name = "KEY_NUMERIC_STAR", .value = KEY_NUMERIC_STAR },
 	{ .name = "KEY_NUMLOCK", .value = KEY_NUMLOCK },
@@ -1200,6 +1258,7 @@ static const struct name_entry code_names[] = {
 	{ .name = "KEY_PASTE", .value = KEY_PASTE },
 	{ .name = "KEY_PAUSE", .value = KEY_PAUSE },
 	{ .name = "KEY_PAUSECD", .value = KEY_PAUSECD },
+	{ .name = "KEY_PAUSE_RECORD", .value = KEY_PAUSE_RECORD },
 	{ .name = "KEY_PC", .value = KEY_PC },
 	{ .name = "KEY_PHONE", .value = KEY_PHONE },
 	{ .name = "KEY_PLAY", .value = KEY_PLAY },
@@ -1238,7 +1297,11 @@ static const struct name_entry code_names[] = {
 	{ .name = "KEY_RIGHTCTRL", .value = KEY_RIGHTCTRL },
 	{ .name = "KEY_RIGHTMETA", .value = KEY_RIGHTMETA },
 	{ .name = "KEY_RIGHTSHIFT", .value = KEY_RIGHTSHIFT },
+	{ .name = "KEY_RIGHT_DOWN", .value = KEY_RIGHT_DOWN },
+	{ .name = "KEY_RIGHT_UP", .value = KEY_RIGHT_UP },
 	{ .name = "KEY_RO", .value = KEY_RO },
+	{ .name = "KEY_ROOT_MENU", .value = KEY_ROOT_MENU },
+	{ .name = "KEY_ROTATE_DISPLAY", .value = KEY_ROTATE_DISPLAY },
 	{ .name = "KEY_S", .value = KEY_S },
 	{ .name = "KEY_SAT", .value = KEY_SAT },
 	{ .name = "KEY_SAT2", .value = KEY_SAT2 },
@@ -1260,6 +1323,7 @@ static const struct name_entry code_names[] = {
 	{ .name = "KEY_SLASH", .value = KEY_SLASH },
 	{ .name = "KEY_SLEEP", .value = KEY_SLEEP },
 	{ .name = "KEY_SLOW", .value = KEY_SLOW },
+	{ .name = "KEY_SLOWREVERSE", .value = KEY_SLOWREVERSE },
 	{ .name = "KEY_SOUND", .value = KEY_SOUND },
 	{ .name = "KEY_SPACE", .value = KEY_SPACE },
 	{ .name = "KEY_SPELLCHECK", .value = KEY_SPELLCHECK },
@@ -1267,6 +1331,7 @@ static const struct name_entry code_names[] = {
 	{ .name = "KEY_SPREADSHEET", .value = KEY_SPREADSHEET },
 	{ .name = "KEY_STOP", .value = KEY_STOP },
 	{ .name = "KEY_STOPCD", .value = KEY_STOPCD },
+	{ .name = "KEY_STOP_RECORD", .value = KEY_STOP_RECORD },
 	{ .name = "KEY_SUBTITLE", .value = KEY_SUBTITLE },
 	{ .name = "KEY_SUSPEND", .value = KEY_SUSPEND },
 	{ .name = "KEY_SWITCHVIDEOMODE", .value = KEY_SWITCHVIDEOMODE },
@@ -1289,6 +1354,7 @@ static const struct name_entry code_names[] = {
 	{ .name = "KEY_U", .value = KEY_U },
 	{ .name = "KEY_UNDO", .value = KEY_UNDO },
 	{ .name = "KEY_UNKNOWN", .value = KEY_UNKNOWN },
+	{ .name = "KEY_UNMUTE", .value = KEY_UNMUTE },
 	{ .name = "KEY_UP", .value = KEY_UP },
 	{ .name = "KEY_UWB", .value = KEY_UWB },
 	{ .name = "KEY_V", .value = KEY_V },
@@ -1299,6 +1365,7 @@ static const struct name_entry code_names[] = {
 	{ .name = "KEY_VIDEOPHONE", .value = KEY_VIDEOPHONE },
 	{ .name = "KEY_VIDEO_NEXT", .value = KEY_VIDEO_NEXT },
 	{ .name = "KEY_VIDEO_PREV", .value = KEY_VIDEO_PREV },
+	{ .name = "KEY_VOD", .value = KEY_VOD },
 	{ .name = "KEY_VOICECOMMAND", .value = KEY_VOICECOMMAND },
 	{ .name = "KEY_VOICEMAIL", .value = KEY_VOICEMAIL },
 	{ .name = "KEY_VOLUMEDOWN", .value = KEY_VOLUMEDOWN },
@@ -1381,10 +1448,12 @@ static const struct name_entry code_names[] = {
 };
 
 static const struct name_entry prop_names[] = {
+	{ .name = "INPUT_PROP_ACCELEROMETER", .value = INPUT_PROP_ACCELEROMETER },
 	{ .name = "INPUT_PROP_BUTTONPAD", .value = INPUT_PROP_BUTTONPAD },
 	{ .name = "INPUT_PROP_DIRECT", .value = INPUT_PROP_DIRECT },
 	{ .name = "INPUT_PROP_MAX", .value = INPUT_PROP_MAX },
 	{ .name = "INPUT_PROP_POINTER", .value = INPUT_PROP_POINTER },
+	{ .name = "INPUT_PROP_POINTING_STICK", .value = INPUT_PROP_POINTING_STICK },
 	{ .name = "INPUT_PROP_SEMI_MT", .value = INPUT_PROP_SEMI_MT },
 	{ .name = "INPUT_PROP_TOPBUTTONPAD", .value = INPUT_PROP_TOPBUTTONPAD },
 };
