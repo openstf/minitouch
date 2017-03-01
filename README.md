@@ -107,7 +107,7 @@ It's also very important to note that the maximum X and Y coordinates may, but u
 
 Example output: `$ 9876`
 
-This is the pid of the minicap process. Useful if you want to kill the process.
+This is the pid of the minitouch process. Useful if you want to kill the process.
 
 ### Writable to the socket
 
