@@ -183,26 +183,27 @@ static int walk_devices(const char* path, internal_state_t* state)
   struct dirent* ent;
   char devpath[FILENAME_MAX];
 
-  if ((dir = opendir(path)) != NULL)
+  if ((dir = opendir(path)) == NULL)
   {
-    while ((ent = readdir(dir)) != NULL)
-    {
-      if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
-      {
-        continue;
-      }
-
-      snprintf(devpath, FILENAME_MAX, "%s/%s", path, ent->d_name);
-
-      consider_device(devpath, state);
-    }
-
-    closedir(dir);
-  }
-  else {
     perror("opendir");
     return -1;
   }
+
+  while ((ent = readdir(dir)) != NULL)
+  {
+    if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+    {
+      continue;
+    }
+
+    snprintf(devpath, FILENAME_MAX, "%s/%s", path, ent->d_name);
+
+    consider_device(devpath, state);
+  }
+
+  closedir(dir);
+
+  return 0;
 }
 
 #define WRITE_EVENT(state, type, code, value) _write_event(state, type, #type, code, #code, value)
@@ -617,7 +618,7 @@ int main(int argc, char* argv[])
   }
   else
   {
-    if (!walk_devices(devroot, &state))
+    if (walk_devices(devroot, &state) != 0)
     {
       fprintf(stderr, "Unable to crawl %s for touch devices\n", devroot);
       return EXIT_FAILURE;
