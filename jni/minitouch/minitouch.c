@@ -53,6 +53,8 @@ typedef struct
   int has_pressure;
   int min_pressure;
   int max_pressure;
+  int evcd_mt_x;
+  int evcd_mt_y;
   int max_x;
   int max_y;
   int max_contacts;
@@ -86,6 +88,27 @@ static int is_multitouch_device(struct libevdev* evdev)
 static int is_singletouch_device(struct libevdev* evdev)
 {
   return libevdev_has_event_code(evdev, EV_ABS, ABS_X);
+}
+
+static void set_abs_configuration( internal_state_t* state)
+{
+  if (libevdev_has_event_code(state->evdev,EV_ABS, ABS_MT_POSITION_X)
+    && libevdev_has_event_code(state->evdev, EV_ABS, ABS_MT_POSITION_Y))
+  {
+    state->evcd_mt_x = ABS_MT_POSITION_X;
+    state->evcd_mt_y = ABS_MT_POSITION_Y;
+    state->max_x = libevdev_get_abs_maximum(state->evdev, ABS_MT_POSITION_X);
+    state->max_y = libevdev_get_abs_maximum(state->evdev, ABS_MT_POSITION_Y);
+    return;
+  }
+  if(libevdev_has_event_code(state->evdev,EV_ABS, ABS_X) && libevdev_has_event_code(state->evdev,EV_ABS, ABS_Y))
+  {
+    state->evcd_mt_x = ABS_X;
+    state->evcd_mt_y = ABS_Y;
+    state->max_x = libevdev_get_abs_maximum(state->evdev, ABS_X);
+    state->max_y = libevdev_get_abs_maximum(state->evdev, ABS_Y);
+    return;
+  }
 }
 
 static int consider_device(const char* devpath, internal_state_t* state)
@@ -280,8 +303,8 @@ static int type_a_commit(internal_state_t* state)
         if (state->has_pressure)
           WRITE_EVENT(state, EV_ABS, ABS_MT_PRESSURE, state->contacts[contact].pressure);
 
-        WRITE_EVENT(state, EV_ABS, ABS_MT_POSITION_X, state->contacts[contact].x);
-        WRITE_EVENT(state, EV_ABS, ABS_MT_POSITION_Y, state->contacts[contact].y);
+        WRITE_EVENT(state, EV_ABS, state->evcd_mt_x, state->contacts[contact].x);
+        WRITE_EVENT(state, EV_ABS, state->evcd_mt_y, state->contacts[contact].y);
 
         WRITE_EVENT(state, EV_SYN, SYN_MT_REPORT, 0);
 
@@ -302,8 +325,8 @@ static int type_a_commit(internal_state_t* state)
         if (state->has_pressure)
           WRITE_EVENT(state, EV_ABS, ABS_MT_PRESSURE, state->contacts[contact].pressure);
 
-        WRITE_EVENT(state, EV_ABS, ABS_MT_POSITION_X, state->contacts[contact].x);
-        WRITE_EVENT(state, EV_ABS, ABS_MT_POSITION_Y, state->contacts[contact].y);
+        WRITE_EVENT(state, EV_ABS, state->evcd_mt_x, state->contacts[contact].x);
+        WRITE_EVENT(state, EV_ABS, state->evcd_mt_y, state->contacts[contact].y);
 
         WRITE_EVENT(state, EV_SYN, SYN_MT_REPORT, 0);
         break;
@@ -450,8 +473,8 @@ static int type_b_touch_down(internal_state_t* state, int contact, int x, int y,
   if (state->has_pressure)
     WRITE_EVENT(state, EV_ABS, ABS_MT_PRESSURE, pressure);
 
-  WRITE_EVENT(state, EV_ABS, ABS_MT_POSITION_X, x);
-  WRITE_EVENT(state, EV_ABS, ABS_MT_POSITION_Y, y);
+  WRITE_EVENT(state, EV_ABS, state->evcd_mt_x, x);
+  WRITE_EVENT(state, EV_ABS, state->evcd_mt_y, y);
 
   return 1;
 }
@@ -474,8 +497,8 @@ static int type_b_touch_move(internal_state_t* state, int contact, int x, int y,
   if (state->has_pressure)
     WRITE_EVENT(state, EV_ABS, ABS_MT_PRESSURE, pressure);
 
-  WRITE_EVENT(state, EV_ABS, ABS_MT_POSITION_X, x);
-  WRITE_EVENT(state, EV_ABS, ABS_MT_POSITION_Y, y);
+  WRITE_EVENT(state, EV_ABS, state->evcd_mt_x, x);
+  WRITE_EVENT(state, EV_ABS, state->evcd_mt_y, y);
 
   return 1;
 }
@@ -657,8 +680,7 @@ int main(int argc, char* argv[])
   state.max_pressure= state.has_pressure ?
     libevdev_get_abs_maximum(state.evdev, ABS_MT_PRESSURE) : 0;
 
-  state.max_x = libevdev_get_abs_maximum(state.evdev, ABS_MT_POSITION_X);
-  state.max_y = libevdev_get_abs_maximum(state.evdev, ABS_MT_POSITION_Y);
+  set_abs_configuration(&state);
 
   state.max_tracking_id = state.has_tracking_id
     ? libevdev_get_abs_maximum(state.evdev, ABS_MT_TRACKING_ID)
