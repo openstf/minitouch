@@ -135,9 +135,9 @@ static int consider_device(const char* devpath, internal_state_t* state)
   }
 
   int score = 500;
-  if (!is_multitouch_device(evdev))
+  if (is_multitouch_device(evdev))
   {
-    score += 500
+    score += 500;
   }
   else if (!is_singletouch_device(evdev))
   {
