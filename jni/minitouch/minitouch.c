@@ -83,6 +83,11 @@ static int is_multitouch_device(struct libevdev* evdev)
   return libevdev_has_event_code(evdev, EV_ABS, ABS_MT_POSITION_X);
 }
 
+static int is_singletouch_device(struct libevdev* evdev)
+{
+  return libevdev_has_event_code(evdev, EV_ABS, ABS_X);
+}
+
 static int consider_device(const char* devpath, internal_state_t* state)
 {
   int fd = -1;
@@ -106,12 +111,15 @@ static int consider_device(const char* devpath, internal_state_t* state)
     goto mismatch;
   }
 
+  int score = 500;
   if (!is_multitouch_device(evdev))
+  {
+    score += 500
+  }
+  else if (!is_singletouch_device(evdev))
   {
     goto mismatch;
   }
-
-  int score = 1000;
 
   if (libevdev_has_event_code(evdev, EV_ABS, ABS_MT_TOOL_TYPE))
   {
