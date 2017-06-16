@@ -132,6 +132,25 @@ static int consider_device(const char* devpath, internal_state_t* state)
   if (libevdev_has_event_code(evdev, EV_ABS, ABS_MT_SLOT))
   {
     score += 100;
+
+    // Some devices, e.g. Blackberry PRIV (STV100) have more than one surface
+    // you can touch. On the PRIV, the keypad also acts as a touch screen
+    // that you can swipe and scroll with. The only differences between the
+    // touch devices are that one is named "touch_display" and the other
+    // "touch_keypad", the keypad only supports 3 contacts and the display
+    // up to 9, and the keypad has a much lower resolution. Therefore
+    // increasing the score by the number of contacts should be a relatively
+    // safe bet, though we may also want to decrease the score by, say, 1,
+    // if the device name contains "key" just in case they decide to start
+    // supporting more contacts on both touch surfaces in the future.
+    int num_slots = libevdev_get_abs_maximum(evdev, ABS_MT_SLOT);
+    score += num_slots;
+  }
+
+  // For Blackberry devices, see above.
+  const char* name = libevdev_get_name(evdev);
+  if (strstr(name, "key") != NULL) {
+    score -= 1;
   }
 
   // Alcatel OneTouch Idol 3 has an `input_mt_wrapper` device in addition
