@@ -1,2 +1,7 @@
+/*.tgz
+/.env
+/libs/
 /libs/
 /obj/
+/prebuilt/
+/temp/

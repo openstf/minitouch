@@ -1,0 +1,24 @@
+{
+  "name": "minitouch-prebuilt",
+  "version": "1.0.0",
+  "description": "Prebuilt binaries of minitouch.",
+  "keywords": [
+    "minitouch"
+  ],
+  "bugs": {
+    "url": "https://github.com/openstf/minitouch/issues"
+  },
+  "license": "Apache-2.0",
+  "author": {
+    "name": "The OpenSTF Project",
+    "email": "contact@openstf.io",
+    "url": "https://openstf.io"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openstf/minitouch.git"
+  },
+  "scripts": {
+    "prepublish": "make"
+  }
+}

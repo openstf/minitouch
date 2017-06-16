@@ -1,0 +1,13 @@
+/.editorconfig
+/.env
+/.gitmodules
+/.npmignore
+/*.tgz
+/CONTRIBUTING.md
+/jni/
+/libs/
+/Makefile
+/obj/
+/run.sh
+/temp/
+/yarn-error.log
