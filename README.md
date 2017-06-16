@@ -6,7 +6,7 @@ It works especially well with HTML5 multitouch events, and unlike the Android [m
 
 ## Building
 
-Building requires [NDK](https://developer.android.com/tools/sdk/ndk/index.html), and is known to work with at least with NDK Revision 10 (July 2014).
+Building requires [NDK](https://developer.android.com/tools/sdk/ndk/index.html), and is known to work with at least with NDK Revision 10 (July 2014). *Note that NDK 15 no longer supports anything below Android SDK level 14, meaning that binaries may or may not work on older devices (e.g. Android 2.3).*
 
 We include [libevdev](http://www.freedesktop.org/wiki/Software/libevdev/) as a Git submodule, so first make sure you've fetched it.
 
