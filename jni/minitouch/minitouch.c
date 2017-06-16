@@ -149,7 +149,8 @@ static int consider_device(const char* devpath, internal_state_t* state)
 
   // For Blackberry devices, see above.
   const char* name = libevdev_get_name(evdev);
-  if (strstr(name, "key") != NULL) {
+  if (strstr(name, "key") != NULL)
+  {
     score -= 1;
   }
 
