@@ -115,7 +115,7 @@ This is the pid of the minitouch process. Useful if you want to kill the process
 
 Example input: `c`
 
-Commits the current set of changed touches, causing the to play out on the screen. Nothing visible will happen until the commit, but depending on the device type, they may already have been buffered.
+Commits the current set of changed touches, causing them to play out on the screen. Note that nothing visible will happen until you commit.
 
 Commits are not required to list all active contacts. Changes from the previous state are enough.
 
