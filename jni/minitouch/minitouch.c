@@ -589,7 +589,7 @@ static int start_server(char* sockname)
   strncpy(&addr.sun_path[1], sockname, strlen(sockname));
 
   if (bind(fd, (struct sockaddr*) &addr,
-    sizeof(sa_family_t) + strlen(sockname) + 1) < 0)
+           sizeof(sa_family_t) + strlen(sockname) + 1) < 0)
   {
     perror("binding socket");
     close(fd);
@@ -646,13 +646,37 @@ static void parse_input(char* buffer, internal_state_t* state)
   }
 }
 
+static void io_handler(FILE* input, FILE* output, internal_state_t* state)
+{
+  setvbuf(input, NULL, _IOLBF, 1024);
+  setvbuf(output, NULL, _IOLBF, 1024);
+
+  // Tell version
+  fprintf(output, "v %d\n", VERSION);
+
+  // Tell limits
+  fprintf(output, "^ %d %d %d %d\n",
+          state->max_contacts, state->max_x, state->max_y, state->max_pressure);
+
+  // Tell pid
+  fprintf(output, "$ %d\n", getpid());
+
+  char read_buffer[80];
+
+  while (fgets(read_buffer, sizeof(read_buffer), input) != NULL)
+  {
+    read_buffer[strcspn(read_buffer, "\r\n")] = 0;
+    parse_input(read_buffer, state);
+  }
+}
+
 int main(int argc, char* argv[])
 {
   const char* pname = argv[0];
   const char* devroot = "/dev/input";
   char* device = NULL;
   char* sockname = DEFAULT_SOCKET_NAME;
-  char *stdin_file = NULL;
+  char* stdin_file = NULL;
   int use_stdin = 0;
 
   int opt;
@@ -774,17 +798,12 @@ int main(int argc, char* argv[])
     state.max_contacts = MAX_SUPPORTED_CONTACTS;
   }
 
+  FILE* input;
+  FILE* output;
+
   if (use_stdin || stdin_file != NULL)
   {
-    // Not setting up socket
-    FILE* input;
-    if (use_stdin)
-    {
-      // Reading from terminal
-      input = stdin;
-      fprintf(stderr, "Reading from STDIN\n");
-    }
-    else
+    if (stdin_file != NULL)
     {
       // Reading from a file
       input = fopen(stdin_file, "r");
@@ -800,27 +819,18 @@ int main(int argc, char* argv[])
                 stdin_file);
       }
     }
-
-    char stdin_buffer[80];
-
-    // Tell version
-    fprintf(stderr, "v %d\n", VERSION);
-
-    // Tell limits
-    fprintf(stderr, "^ %d %d %d %d\n",
-            state.max_contacts, state.max_x, state.max_y, state.max_pressure);
-
-    // Tell pid
-    fprintf(stderr, "$ %d\n", getpid());
-
-
-    while (fgets(stdin_buffer, sizeof(stdin_buffer), input) != NULL)
+    else
     {
-      stdin_buffer[strcspn(stdin_buffer, "\r\n")] = 0;
-      parse_input(stdin_buffer, &state);
+      // Reading from terminal
+      input = stdin;
+      fprintf(stderr, "Reading from STDIN\n");
     }
 
-    return EXIT_SUCCESS;
+    output = stderr;
+    io_handler(input, output, &state);
+    fclose(input);
+    fclose(output);
+    exit(EXIT_SUCCESS);
   }
 
   struct sockaddr_un client_addr;
@@ -847,58 +857,25 @@ int main(int argc, char* argv[])
 
     fprintf(stderr, "Connection established\n");
 
-    char io_buffer[80] = {0};
-    int io_length = 0;
-    char* cursor;
-    long int contact, x, y, pressure, wait;
-
-    // touch_panic_reset_all(&state);
-
-    // Tell version
-    io_length = snprintf(io_buffer, sizeof(io_buffer), "v %d\n", VERSION);
-    write(client_fd, io_buffer, io_length);
-
-    // Tell limits
-    io_length = snprintf(io_buffer, sizeof(io_buffer), "^ %d %d %d %d\n",
-      state.max_contacts, state.max_x, state.max_y, state.max_pressure);
-    write(client_fd, io_buffer, io_length);
-
-    // Tell pid
-    io_length = snprintf(io_buffer, sizeof(io_buffer), "$ %d\n", getpid());
-    write(client_fd, io_buffer, io_length);
-
-    while (1)
+    input = fdopen(client_fd, "r");
+    if (input == NULL)
     {
-      io_length = 0;
-
-      while (io_length < sizeof(io_buffer) &&
-             read(client_fd, &io_buffer[io_length], 1) == 1)
-      {
-        if (io_buffer[io_length++] == '\n')
-        {
-          break;
-        }
-      }
-
-      if (io_length <= 0)
-      {
-        break;
-      }
-
-      if (io_buffer[io_length - 1] != '\n')
-      {
-        continue;
-      }
-
-      if (io_length == 1)
-      {
-        continue;
-      }
-
-      parse_input(io_buffer, &state);
+      fprintf(stderr, "%s: fdopen(client_fd,'r')\n", strerror(errno));
+      exit(1);
     }
 
+    output = fdopen(dup(client_fd), "w");
+    if (output == NULL)
+    {
+      fprintf(stderr, "%s: fdopen(client_fd,'w')\n", strerror(errno));
+      exit(1);
+    }
+
+    io_handler(input, output, &state);
+
     fprintf(stderr, "Connection closed\n");
+    fclose(input);
+    fclose(output);
     close(client_fd);
   }
 
