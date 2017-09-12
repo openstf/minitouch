@@ -589,7 +589,7 @@ static int start_server(char* sockname)
   strncpy(&addr.sun_path[1], sockname, strlen(sockname));
 
   if (bind(fd, (struct sockaddr*) &addr,
-           sizeof(sa_family_t) + strlen(sockname) + 1) < 0)
+    sizeof(sa_family_t) + strlen(sockname) + 1) < 0)
   {
     perror("binding socket");
     close(fd);
