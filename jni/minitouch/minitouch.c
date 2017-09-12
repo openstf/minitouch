@@ -26,6 +26,8 @@ static void usage(const char* pname)
     "  -d <device>: Use the given touch device. Otherwise autodetect.\n"
     "  -n <name>:   Change the name of of the abtract unix domain socket. (%s)\n"
     "  -v:          Verbose output.\n"
+    "  -i:          Use STDIN and doesn't start socket.\n"
+    "  -f <file>:   Runs a file with a list of commands, doesn't start socket."
     "  -h:          Show help.\n",
     pname, DEFAULT_SOCKET_NAME
   );
@@ -599,15 +601,62 @@ static int start_server(char* sockname)
   return fd;
 }
 
+static void parse_input(char* buffer, internal_state_t* state)
+{
+  char* cursor;
+  long int contact, x, y, pressure, wait;
+
+  cursor = (char*) buffer;
+  cursor += 1;
+
+  switch (buffer[0])
+  {
+    case 'c': // COMMIT
+      commit(state);
+      break;
+    case 'r': // RESET
+      touch_panic_reset_all(state);
+      break;
+    case 'd': // TOUCH DOWN
+      contact = strtol(cursor, &cursor, 10);
+      x = strtol(cursor, &cursor, 10);
+      y = strtol(cursor, &cursor, 10);
+      pressure = strtol(cursor, &cursor, 10);
+      touch_down(state, contact, x, y, pressure);
+      break;
+    case 'm': // TOUCH MOVE
+      contact = strtol(cursor, &cursor, 10);
+      x = strtol(cursor, &cursor, 10);
+      y = strtol(cursor, &cursor, 10);
+      pressure = strtol(cursor, &cursor, 10);
+      touch_move(state, contact, x, y, pressure);
+      break;
+    case 'u': // TOUCH UP
+      contact = strtol(cursor, &cursor, 10);
+      touch_up(state, contact);
+      break;
+    case 'w':
+      wait = strtol(cursor, &cursor, 10);
+      if (g_verbose)
+        fprintf(stderr, "Waiting %ld ms\n", wait);
+      usleep(wait * 1000);
+      break;
+    default:
+      break;
+  }
+}
+
 int main(int argc, char* argv[])
 {
   const char* pname = argv[0];
   const char* devroot = "/dev/input";
   char* device = NULL;
   char* sockname = DEFAULT_SOCKET_NAME;
+  char *stdin_file = NULL;
+  int use_stdin = 0;
 
   int opt;
-  while ((opt = getopt(argc, argv, "d:n:vh")) != -1) {
+  while ((opt = getopt(argc, argv, "d:n:vif:h")) != -1) {
     switch (opt) {
       case 'd':
         device = optarg;
@@ -617,6 +666,12 @@ int main(int argc, char* argv[])
         break;
       case 'v':
         g_verbose = 1;
+        break;
+      case 'i':
+        use_stdin = 1;
+        break;
+      case 'f':
+        stdin_file = optarg;
         break;
       case '?':
         usage(pname);
@@ -719,6 +774,55 @@ int main(int argc, char* argv[])
     state.max_contacts = MAX_SUPPORTED_CONTACTS;
   }
 
+  if (use_stdin || stdin_file != NULL)
+  {
+    // Not setting up socket
+    FILE* input;
+    if (use_stdin)
+    {
+      // Reading from terminal
+      input = stdin;
+      fprintf(stderr, "Reading from STDIN\n");
+    }
+    else
+    {
+      // Reading from a file
+      input = fopen(stdin_file, "r");
+      if (NULL == input)
+      {
+        fprintf(stderr, "Unable to open '%s': %s\n",
+                stdin_file, strerror(errno));
+        exit(EXIT_FAILURE);
+      }
+      else
+      {
+        fprintf(stderr, "Reading commands from '%s'\n",
+                stdin_file);
+      }
+    }
+
+    char stdin_buffer[80];
+
+    // Tell version
+    fprintf(stderr, "v %d\n", VERSION);
+
+    // Tell limits
+    fprintf(stderr, "^ %d %d %d %d\n",
+            state.max_contacts, state.max_x, state.max_y, state.max_pressure);
+
+    // Tell pid
+    fprintf(stderr, "$ %d\n", getpid());
+
+
+    while (fgets(stdin_buffer, sizeof(stdin_buffer), input) != NULL)
+    {
+      stdin_buffer[strcspn(stdin_buffer, "\r\n")] = 0;
+      parse_input(stdin_buffer, &state);
+    }
+
+    return EXIT_SUCCESS;
+  }
+
   struct sockaddr_un client_addr;
   socklen_t client_addr_length = sizeof(client_addr);
 
@@ -768,7 +872,7 @@ int main(int argc, char* argv[])
       io_length = 0;
 
       while (io_length < sizeof(io_buffer) &&
-        read(client_fd, &io_buffer[io_length], 1) == 1)
+             read(client_fd, &io_buffer[io_length], 1) == 1)
       {
         if (io_buffer[io_length++] == '\n')
         {
@@ -791,42 +895,7 @@ int main(int argc, char* argv[])
         continue;
       }
 
-      cursor = (char*) &io_buffer;
-      cursor += 1;
-
-      switch (io_buffer[0])
-      {
-        case 'c': // COMMIT
-          commit(&state);
-          break;
-        case 'r': // RESET
-          touch_panic_reset_all(&state);
-          break;
-        case 'd': // TOUCH DOWN
-          contact = strtol(cursor, &cursor, 10);
-          x = strtol(cursor, &cursor, 10);
-          y = strtol(cursor, &cursor, 10);
-          pressure = strtol(cursor, &cursor, 10);
-          touch_down(&state, contact, x, y, pressure);
-          break;
-        case 'm': // TOUCH MOVE
-          contact = strtol(cursor, &cursor, 10);
-          x = strtol(cursor, &cursor, 10);
-          y = strtol(cursor, &cursor, 10);
-          pressure = strtol(cursor, &cursor, 10);
-          touch_move(&state, contact, x, y, pressure);
-          break;
-        case 'u': // TOUCH UP
-          contact = strtol(cursor, &cursor, 10);
-          touch_up(&state, contact);
-          break;
-        case 'w':
-          wait = strtol(cursor, &cursor, 10);
-          usleep(wait * 1000);
-          break;
-        default:
-          break;
-      }
+      parse_input(io_buffer, &state);
     }
 
     fprintf(stderr, "Connection closed\n");
