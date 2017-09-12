@@ -22,12 +22,12 @@ static int g_verbose = 0;
 static void usage(const char* pname)
 {
   fprintf(stderr,
-    "Usage: %s [-h] [-d <device>] [-n <name>]\n"
+    "Usage: %s [-h] [-d <device>] [-n <name>] [-v] [-i] [-f <file>]\n"
     "  -d <device>: Use the given touch device. Otherwise autodetect.\n"
     "  -n <name>:   Change the name of of the abtract unix domain socket. (%s)\n"
     "  -v:          Verbose output.\n"
-    "  -i:          Use STDIN and doesn't start socket.\n"
-    "  -f <file>:   Runs a file with a list of commands, doesn't start socket."
+    "  -i:          Uses STDIN and doesn't start socket.\n"
+    "  -f <file>:   Runs a file with a list of commands, doesn't start socket.\n"
     "  -h:          Show help.\n",
     pname, DEFAULT_SOCKET_NAME
   );
