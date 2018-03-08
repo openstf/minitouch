@@ -53,19 +53,22 @@ adb shell /data/local/tmp/minitouch -h
 Currently, this should output be something along the lines of:
 
 ```
-Usage: /data/local/tmp/minitouch [-h] [-d <device>] [-n <name>]
+Usage: /data/local/tmp/minitouch [-h] [-d <device>] [-n <name>] [-v] [-i] [-f <file>]
   -d <device>: Use the given touch device. Otherwise autodetect.
   -n <name>:   Change the name of of the abtract unix domain socket. (minitouch)
+  -v:          Verbose output.
+  -i:          Uses STDIN and doesn't start socket.
+  -f <file>:   Runs a file with a list of commands, doesn't start socket.
   -h:          Show help.
 ````
 
-So, we can simply run the binary without any options, and it will try to detect an appropriate device and start listening on an abstract unix domain socket.
+So, we can simply run the binary without any options, and it will try to detect an appropriate device and start listening on an abstract unix domain socket. Alternatively, you can start minitouch with the `-i` option and input commands directly via standard input, or `-f <file>` to read commands from a file.
 
 ```bash
 adb shell /data/local/tmp/minitouch
 ```
 
-Unless there was an error message and the binary exited, we should now have a socket open on the device. Now we simply need to create a local forward so that we can connect to the socket.
+If you chose to use a socket, you need to connect to it separately. Unless there was an error message and the binary exited, we should now have a server open on the device. Now we simply need to create a local forward so that we can connect to it.
 
 ```bash
 adb forward tcp:1111 localabstract:minitouch
@@ -77,15 +80,15 @@ Now you can connect to the socket using the local port. Note that currently **on
 nc localhost 1111
 ```
 
-This will give you some strange output that will be explained in the next section.
+The following section explains how to interact with minitouch.
 
 ## Usage
 
-It is assumed that you now have an open connection to the minitouch socket. If not, follow the [instructions](#running) above.
+It is assumed that you now have an open connection to the minitouch socket or you're running minitouch in stdin/file mode. If not, follow the [instructions](#running) above.
 
 The minitouch protocol is based on LF-separated lines. Each line is a separate command, and each line begins with a single ASCII letter which specifies the command type. Space-separated command-specific arguments then follow.
 
-When you first open a connection to the socket, you'll get some protocol metadata which you'll need to read from the socket. Other than that there will be no responses of any kind.
+When you first open a connection to the socket, you'll receive a header with metadata which you'll need to read from the socket. Other than that there will be no responses of any kind.
 
 ### Readable from the socket
 
