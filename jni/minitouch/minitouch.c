@@ -62,6 +62,7 @@ typedef struct
   int max_tracking_id;
   int tracking_id;
   contact_t contacts[MAX_SUPPORTED_CONTACTS];
+  int active_contacts;
 } internal_state_t;
 
 static int is_character_device(const char* devpath)
@@ -280,10 +281,13 @@ static int type_a_commit(internal_state_t* state)
       case 1: // WENT_DOWN
         found_any = 1;
 
+        state->active_contacts += 1;
+
         if (state->has_tracking_id)
           WRITE_EVENT(state, EV_ABS, ABS_MT_TRACKING_ID, contact);
 
-        if (state->has_key_btn_touch)
+        // Send BTN_TOUCH on first contact only.
+        if (state->active_contacts == 1 && state->has_key_btn_touch)
           WRITE_EVENT(state, EV_KEY, BTN_TOUCH, 1);
 
         if (state->has_touch_major)
@@ -325,10 +329,13 @@ static int type_a_commit(internal_state_t* state)
       case 3: // WENT_UP
         found_any = 1;
 
+        state->active_contacts -= 1;
+
         if (state->has_tracking_id)
           WRITE_EVENT(state, EV_ABS, ABS_MT_TRACKING_ID, contact);
 
-        if (state->has_key_btn_touch)
+        // Send BTN_TOUCH only when no contacts remain.
+        if (state->active_contacts == 0 && state->has_key_btn_touch)
           WRITE_EVENT(state, EV_KEY, BTN_TOUCH, 0);
 
         WRITE_EVENT(state, EV_SYN, SYN_MT_REPORT, 0);
@@ -448,12 +455,14 @@ static int type_b_touch_down(internal_state_t* state, int contact, int x, int y,
 
   state->contacts[contact].enabled = 1;
   state->contacts[contact].tracking_id = next_tracking_id(state);
+  state->active_contacts += 1;
 
   WRITE_EVENT(state, EV_ABS, ABS_MT_SLOT, contact);
   WRITE_EVENT(state, EV_ABS, ABS_MT_TRACKING_ID,
     state->contacts[contact].tracking_id);
 
-  if (state->has_key_btn_touch)
+  // Send BTN_TOUCH on first contact only.
+  if (state->active_contacts == 1 && state->has_key_btn_touch)
     WRITE_EVENT(state, EV_KEY, BTN_TOUCH, 1);
 
   if (state->has_touch_major)
@@ -503,11 +512,14 @@ static int type_b_touch_up(internal_state_t* state, int contact)
   }
 
   state->contacts[contact].enabled = 0;
+  state->contacts[contact].enabled = 0;
+  state->active_contacts -= 1;
 
   WRITE_EVENT(state, EV_ABS, ABS_MT_SLOT, contact);
   WRITE_EVENT(state, EV_ABS, ABS_MT_TRACKING_ID, -1);
 
-  if (state->has_key_btn_touch)
+  // Send BTN_TOUCH only when no contacts remain.
+  if (state->active_contacts == 0 && state->has_key_btn_touch)
     WRITE_EVENT(state, EV_KEY, BTN_TOUCH, 0);
 
   return 1;
