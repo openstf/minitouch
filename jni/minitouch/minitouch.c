@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -115,7 +116,7 @@ static int consider_device(const char* devpath, internal_state_t* state)
     goto mismatch;
   }
 
-  int score = 1000;
+  int score = 10000;
 
   if (libevdev_has_event_code(evdev, EV_ABS, ABS_MT_TOOL_TYPE))
   {
@@ -134,7 +135,7 @@ static int consider_device(const char* devpath, internal_state_t* state)
 
   if (libevdev_has_event_code(evdev, EV_ABS, ABS_MT_SLOT))
   {
-    score += 100;
+    score += 1000;
 
     // Some devices, e.g. Blackberry PRIV (STV100) have more than one surface
     // you can touch. On the PRIV, the keypad also acts as a touch screen
@@ -163,7 +164,20 @@ static int consider_device(const char* devpath, internal_state_t* state)
   // is under the point. That wrapper device lacks the direct property.
   if (libevdev_has_property(evdev, INPUT_PROP_DIRECT))
   {
-    score += 1000;
+    score += 10000;
+  }
+
+  // Some devices may have an additional screen. For example, Meizu Pro7 Plus
+  // has a small screen on the back side of the device called sub_touch, while
+  // the boring screen in the front is called main_touch. The resolution on
+  // the sub_touch device is much much lower. It seems like a safe bet
+  // to always prefer the larger device, as long as the score adjustment is
+  // likely to be lower than the adjustment we do for INPUT_PROP_DIRECT.
+  if (libevdev_has_event_code(evdev, EV_ABS, ABS_MT_POSITION_X))
+  {
+    int x = libevdev_get_abs_maximum(evdev, ABS_MT_POSITION_X);
+    int y = libevdev_get_abs_maximum(evdev, ABS_MT_POSITION_Y);
+    score += sqrt(x * y);
   }
 
   if (state->evdev != NULL)
