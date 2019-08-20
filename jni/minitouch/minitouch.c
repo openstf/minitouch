@@ -152,8 +152,11 @@ static int consider_device(const char* devpath, internal_state_t* state)
   }
 
   // For Blackberry devices, see above.
+  // Also some device like SO-03L it has two touch device, one is for touch
+  // one is for side sense which name is 'sec_touchscreen_side'.
+  // So add one more check for '_side'. check issue #45 for more info
   const char* name = libevdev_get_name(evdev);
-  if (strstr(name, "key") != NULL)
+  if (strstr(name, "key") != NULL || strstr(name, "_side") != NULL)
   {
     score -= 1;
   }
