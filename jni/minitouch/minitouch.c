@@ -699,6 +699,71 @@ static void io_handler(FILE* input, FILE* output, internal_state_t* state)
   }
 }
 
+static void proxy_handler(FILE* input, FILE* output, int proxy_fd)
+{
+  char read_buffer[80];
+  FILE* proxy_input;
+  FILE* proxy_output;
+  proxy_input = fdopen(proxy_fd, "r");
+  if (proxy_input == NULL)
+  {
+    fprintf(stderr, "%s: fdopen(proxy_fd,'r')\n", strerror(errno));
+    exit(1);
+  }
+  proxy_output = fdopen(dup(proxy_fd), "w");
+  if (proxy_output == NULL)
+  {
+    fprintf(stderr, "%s: fdopen(proxy_fd,'w')\n", strerror(errno));
+    exit(1);
+  }
+  setvbuf(proxy_input, NULL, _IOLBF, 1024);
+  setvbuf(proxy_output, NULL, _IOLBF, 1024);
+
+  // Get version from the agent
+  fgets(read_buffer, sizeof(read_buffer), proxy_input);
+  fprintf(output, "%s", read_buffer);
+
+  // Get the poiner x-y range from the agent
+  fgets(read_buffer, sizeof(read_buffer), proxy_input);
+  fprintf(output, "%s", read_buffer);
+
+  // Tell pid
+  fprintf(output, "$ %d\n", getpid());
+  fflush(output);
+
+  // Forward every event to the agent
+  while (fgets(read_buffer, sizeof(read_buffer), input) != NULL)
+  {
+    fprintf(proxy_output, "%s", read_buffer);
+  }
+}
+
+int connect_android_service() {
+  int service_fd = 0;
+  struct sockaddr_un serv_addr;
+  const char* const socketname = "minitouchagent";
+
+  memset(&serv_addr, 0, sizeof(serv_addr));
+  serv_addr.sun_family = AF_UNIX;
+  serv_addr.sun_path[0] = '\0';
+  strncpy(serv_addr.sun_path+1, socketname, strlen(socketname));
+
+  service_fd = socket(PF_UNIX, SOCK_STREAM, 0);
+  if (service_fd < 0)
+  {
+    perror("creating socket");
+    return -1;
+  }
+
+  int err = connect(service_fd, (struct sockaddr*) &serv_addr, offsetof(struct sockaddr_un, sun_path) + 1/*\0*/ + strlen(socketname));
+  if (err != 0) {
+    perror("connecting socket");
+    return -1;
+  }
+  fprintf(stderr, "using Android InputManager\n");
+  return service_fd;
+}
+
 int main(int argc, char* argv[])
 {
   const char* pname = argv[0];
@@ -707,6 +772,7 @@ int main(int argc, char* argv[])
   char* sockname = DEFAULT_SOCKET_NAME;
   char* stdin_file = NULL;
   int use_stdin = 0;
+  int android_service_fd = -1;
 
   int opt;
   while ((opt = getopt(argc, argv, "d:n:vif:h")) != -1) {
@@ -757,74 +823,77 @@ int main(int argc, char* argv[])
   if (state.evdev == NULL)
   {
     fprintf(stderr, "Unable to find a suitable touch device\n");
-    return EXIT_FAILURE;
-  }
+    android_service_fd = connect_android_service();
+    if( android_service_fd == -1) {
+      return EXIT_FAILURE;
+    }
+  } else {
+    state.has_mtslot =
+      libevdev_has_event_code(state.evdev, EV_ABS, ABS_MT_SLOT);
+    state.has_tracking_id =
+      libevdev_has_event_code(state.evdev, EV_ABS, ABS_MT_TRACKING_ID);
+    state.has_key_btn_touch =
+      libevdev_has_event_code(state.evdev, EV_KEY, BTN_TOUCH);
+    state.has_touch_major =
+      libevdev_has_event_code(state.evdev, EV_ABS, ABS_MT_TOUCH_MAJOR);
+    state.has_width_major =
+      libevdev_has_event_code(state.evdev, EV_ABS, ABS_MT_WIDTH_MAJOR);
 
-  state.has_mtslot =
-    libevdev_has_event_code(state.evdev, EV_ABS, ABS_MT_SLOT);
-  state.has_tracking_id =
-    libevdev_has_event_code(state.evdev, EV_ABS, ABS_MT_TRACKING_ID);
-  state.has_key_btn_touch =
-    libevdev_has_event_code(state.evdev, EV_KEY, BTN_TOUCH);
-  state.has_touch_major =
-    libevdev_has_event_code(state.evdev, EV_ABS, ABS_MT_TOUCH_MAJOR);
-  state.has_width_major =
-    libevdev_has_event_code(state.evdev, EV_ABS, ABS_MT_WIDTH_MAJOR);
+    state.has_pressure =
+      libevdev_has_event_code(state.evdev, EV_ABS, ABS_MT_PRESSURE);
+    state.min_pressure = state.has_pressure ?
+      libevdev_get_abs_minimum(state.evdev, ABS_MT_PRESSURE) : 0;
+    state.max_pressure= state.has_pressure ?
+      libevdev_get_abs_maximum(state.evdev, ABS_MT_PRESSURE) : 0;
 
-  state.has_pressure =
-    libevdev_has_event_code(state.evdev, EV_ABS, ABS_MT_PRESSURE);
-  state.min_pressure = state.has_pressure ?
-    libevdev_get_abs_minimum(state.evdev, ABS_MT_PRESSURE) : 0;
-  state.max_pressure= state.has_pressure ?
-    libevdev_get_abs_maximum(state.evdev, ABS_MT_PRESSURE) : 0;
+    state.max_x = libevdev_get_abs_maximum(state.evdev, ABS_MT_POSITION_X);
+    state.max_y = libevdev_get_abs_maximum(state.evdev, ABS_MT_POSITION_Y);
 
-  state.max_x = libevdev_get_abs_maximum(state.evdev, ABS_MT_POSITION_X);
-  state.max_y = libevdev_get_abs_maximum(state.evdev, ABS_MT_POSITION_Y);
+    state.max_tracking_id = state.has_tracking_id
+      ? libevdev_get_abs_maximum(state.evdev, ABS_MT_TRACKING_ID)
+      : INT_MAX;
 
-  state.max_tracking_id = state.has_tracking_id
-    ? libevdev_get_abs_maximum(state.evdev, ABS_MT_TRACKING_ID)
-    : INT_MAX;
+    if (!state.has_mtslot && state.max_tracking_id == 0)
+    {
+      // The touch device reports incorrect values. There would be no point
+      // in supporting ABS_MT_TRACKING_ID at all if the maximum value was 0
+      // (i.e. one contact). This happens on Lenovo Yoga Tablet B6000-F,
+      // which actually seems to support ~10 contacts. So, we'll just go with
+      // as many as we can and hope that the system will ignore extra contacts.
+      state.max_tracking_id = MAX_SUPPORTED_CONTACTS - 1;
+      fprintf(stderr,
+        "Note: type A device reports a max value of 0 for ABS_MT_TRACKING_ID. "
+        "This means that the device is most likely reporting incorrect "
+        "information. Guessing %d.\n",
+        state.max_tracking_id
+      );
+    }
 
-  if (!state.has_mtslot && state.max_tracking_id == 0)
-  {
-    // The touch device reports incorrect values. There would be no point
-    // in supporting ABS_MT_TRACKING_ID at all if the maximum value was 0
-    // (i.e. one contact). This happens on Lenovo Yoga Tablet B6000-F,
-    // which actually seems to support ~10 contacts. So, we'll just go with
-    // as many as we can and hope that the system will ignore extra contacts.
-    state.max_tracking_id = MAX_SUPPORTED_CONTACTS - 1;
+    state.max_contacts = state.has_mtslot
+      ? libevdev_get_abs_maximum(state.evdev, ABS_MT_SLOT) + 1
+      : (state.has_tracking_id ? state.max_tracking_id + 1 : 2);
+
+    state.tracking_id = 0;
+
+    int contact;
+    for (contact = 0; contact < MAX_SUPPORTED_CONTACTS; ++contact)
+    {
+      state.contacts[contact].enabled = 0;
+    }
+
     fprintf(stderr,
-      "Note: type A device reports a max value of 0 for ABS_MT_TRACKING_ID. "
-      "This means that the device is most likely reporting incorrect "
-      "information. Guessing %d.\n",
-      state.max_tracking_id
+      "%s touch device %s (%dx%d with %d contacts) detected on %s (score %d)\n",
+      state.has_mtslot ? "Type B" : "Type A",
+      libevdev_get_name(state.evdev),
+      state.max_x, state.max_y, state.max_contacts,
+      state.path, state.score
     );
-  }
 
-  state.max_contacts = state.has_mtslot
-    ? libevdev_get_abs_maximum(state.evdev, ABS_MT_SLOT) + 1
-    : (state.has_tracking_id ? state.max_tracking_id + 1 : 2);
-
-  state.tracking_id = 0;
-
-  int contact;
-  for (contact = 0; contact < MAX_SUPPORTED_CONTACTS; ++contact)
-  {
-    state.contacts[contact].enabled = 0;
-  }
-
-  fprintf(stderr,
-    "%s touch device %s (%dx%d with %d contacts) detected on %s (score %d)\n",
-    state.has_mtslot ? "Type B" : "Type A",
-    libevdev_get_name(state.evdev),
-    state.max_x, state.max_y, state.max_contacts,
-    state.path, state.score
-  );
-
-  if (state.max_contacts > MAX_SUPPORTED_CONTACTS) {
-    fprintf(stderr, "Note: hard-limiting maximum number of contacts to %d\n",
-      MAX_SUPPORTED_CONTACTS);
-    state.max_contacts = MAX_SUPPORTED_CONTACTS;
+    if (state.max_contacts > MAX_SUPPORTED_CONTACTS) {
+      fprintf(stderr, "Note: hard-limiting maximum number of contacts to %d\n",
+        MAX_SUPPORTED_CONTACTS);
+      state.max_contacts = MAX_SUPPORTED_CONTACTS;
+    }
   }
 
   FILE* input;
@@ -856,7 +925,11 @@ int main(int argc, char* argv[])
     }
 
     output = stderr;
-    io_handler(input, output, &state);
+    if(android_service_fd > 0) {
+      proxy_handler(input, output, android_service_fd);
+    } else {
+      io_handler(input, output, &state);
+    }
     fclose(input);
     fclose(output);
     exit(EXIT_SUCCESS);
@@ -900,7 +973,11 @@ int main(int argc, char* argv[])
       exit(1);
     }
 
-    io_handler(input, output, &state);
+    if(android_service_fd > 0) {
+      proxy_handler(input, output, android_service_fd);
+    } else {
+      io_handler(input, output, &state);
+    }
 
     fprintf(stderr, "Connection closed\n");
     fclose(input);
