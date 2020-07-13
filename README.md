@@ -1,5 +1,9 @@
 # minitouch
 
+# Warning
+
+This repository was superseded by https://github.com/DeviceFarmer/minitouch
+
 Minitouch provides a socket interface for triggering multitouch events and gestures on Android devices. It works without root if started via [ADB](http://developer.android.com/tools/help/adb.html) on at least SDK 25 and lower, though any version should work. The sole exception is SDK 20 (Android Wear), which does require root. The lowest SDK level we test is 10 (i.e. Android 2.3.3).
 
 It works especially well with HTML5 multitouch events, and unlike the Android [monkey](http://developer.android.com/tools/help/monkey.html) tool, allows you to access the whole screen (including any software buttons).
